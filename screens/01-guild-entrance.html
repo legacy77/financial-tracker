@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guild Entrance — Family Finance Hub</title>
+  <link rel="stylesheet" href="../styles/modern-theme.css">
+  <link rel="stylesheet" href="../styles/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body style="display: flex; flex-direction: column; min-height: 100vh;">
+  <!-- Header with Theme Toggle -->
+  <header class="guild-banner" role="banner">
+    <div class="container flex items-center justify-between" style="padding-top: var(--space-6); padding-bottom: var(--space-6);">
+      <h1 class="guild-banner__title">🏰 Family Finance Hub</h1>
+      <button class="btn btn--secondary" id="themeToggle" aria-label="Ganti tema">🌙</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding-top: var(--space-8); padding-bottom: var(--space-8);">
+    <div class="card p-8" style="width: 100%; max-width: 440px;">
+      <div class="text-center mb-6">
+        <h2 class="mb-2">Masuk Guild</h2>
+        <p class="text-tertiary text-sm">Autentikasi untuk mengakses brankas keuangan keluarga</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2" for="email">Email Guild Master</label>
+          <input type="email" id="email" class="input" placeholder="master@guild.com" value="master@guild.com" required>
+        </div>
+
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-sm font-semibold" for="password">Secret Password</label>
+            <a href="#" class="text-xs">Lupa sandi?</a>
+          </div>
+          <input type="password" id="password" class="input" placeholder="••••••••" value="password123" required>
+        </div>
+
+        <button type="submit" class="btn btn--primary w-full justify-center py-3">🔑 Masuk ke Guild Hall</button>
+      </form>
+
+      <div class="divider"></div>
+
+      <div class="text-center">
+        <p class="text-tertiary text-sm">Belum punya Guild? <a href="02-guild-hall.html" class="font-semibold">Buat Guild Baru</a></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
+    <a href="../index.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏠</span>
+      <span class="bottom-nav__label">HOME</span>
+    </a>
+    <a href="01-guild-entrance.html" class="bottom-nav__item bottom-nav__item--active">
+      <span class="bottom-nav__icon">🔑</span>
+      <span class="bottom-nav__label">LOGIN</span>
+    </a>
+    <a href="02-guild-hall.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏰</span>
+      <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="03-inventory.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🎒</span>
+      <span class="bottom-nav__label">INVENTORY</span>
+    </a>
+    <a href="04-scroll-reading.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📜</span>
+      <span class="bottom-nav__label">IMPORT</span>
+    </a>
+  </nav>
+
+  <div class="toast-container" aria-live="polite"></div>
+
+  <script>
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeToggle');
+    const stored = localStorage.getItem('ffh-theme');
+    if (stored === 'dark') root.classList.add('dark');
+    if (stored === 'light') root.classList.add('light');
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.classList.toggle('dark');
+      root.classList.remove(isDark ? 'light' : 'dark');
+      localStorage.setItem('ffh-theme', isDark ? 'dark' : 'light');
+      themeBtn.textContent = isDark ? '☀️' : '🌙';
+    });
+    if (root.classList.contains('dark')) themeBtn.textContent = '☀️';
+
+    function showToast(msg, type) {
+      type = type || 'success';
+      const c = document.querySelector('.toast-container');
+      const t = document.createElement('div');
+      t.className = 'toast toast--' + type;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.classList.add('toast--show'), 10);
+      setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      showToast('Login berhasil! Memasuki Guild Hall...', 'success');
+      setTimeout(() => { window.location.href = '02-guild-hall.html'; }, 1000);
+    }
+  </script>
+</body>
+</html>

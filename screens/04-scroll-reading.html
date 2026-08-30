@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scroll Reading — Family Finance Hub</title>
+  <link rel="stylesheet" href="../styles/modern-theme.css">
+  <link rel="stylesheet" href="../styles/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="guild-banner" role="banner">
+    <div class="container flex items-center justify-between" style="padding-top: var(--space-6); padding-bottom: var(--space-6);">
+      <h1 class="guild-banner__title">🏰 Family Finance Hub</h1>
+      <div class="flex items-center gap-4">
+        <div class="guild-banner__gold font-bold">💰 12.450.000</div>
+        <button class="btn btn--secondary" id="themeToggle" aria-label="Ganti tema">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" style="padding-top: var(--space-8); padding-bottom: var(--space-8); max-width: 800px;">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="mb-1">Baca Scroll</h2>
+        <p class="text-tertiary">Import transaksi dari bank statement (CSV/Excel)</p>
+      </div>
+      <span class="badge badge--gold">🔮 Beta</span>
+    </div>
+
+    <!-- Upload Zone -->
+    <div class="card p-8 mb-6 text-center">
+      <div class="mb-4 text-5xl">📜</div>
+      <h3 class="mb-2">Seret Scroll ke Sini</h3>
+      <p class="text-tertiary mb-6">Atau klik untuk memilih file CSV/Excel dari bank kamu</p>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="sr-only" onchange="handleFileSelect(event)">
+      <button class="btn btn--primary" onclick="document.getElementById('fileInput').click()">📂 Pilih File</button>
+      <p class="text-tertiary text-xs mt-4">Format didukung: CSV, XLSX, XLS • Maks 10MB</p>
+    </div>
+
+    <!-- Preview Area (hidden until file selected) -->
+    <div id="previewSection" class="card p-6 mb-6" style="display: none;">
+      <div class="flex items-center justify-between mb-4">
+        <h3>Pratinjau Data</h3>
+        <span id="fileName" class="badge badge--info"></span>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="table" id="previewTable">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Deskripsi</th>
+              <th>Jumlah</th>
+              <th>Tipe</th>
+              <th>Kategori</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div class="flex justify-end gap-3 mt-4">
+        <button class="btn btn--secondary" onclick="resetImport()">❌ Batal</button>
+        <button class="btn btn--primary" onclick="confirmImport()">✅ Import ke Inventory</button>
+      </div>
+    </div>
+
+    <!-- Import History -->
+    <div class="card p-6">
+      <h3 class="mb-4">Riwayat Import</h3>
+      <div class="list">
+        <div class="list__item">
+          <div class="list__icon">📄</div>
+          <div class="list__content">
+            <div class="list__title">BCA Statement Oktober 2024</div>
+            <div class="list__subtitle">45 transaksi • 12 Okt 2024</div>
+          </div>
+          <div class="list__meta flex-col items-end">
+            <span class="badge badge--success">Selesai</span>
+            <span class="text-xs text-tertiary">+2.1M / -1.8M</span>
+          </div>
+        </div>
+        <div class="list__item">
+          <div class="list__icon">📄</div>
+          <div class="list__content">
+            <div class="list__title">Mandiri E-Statement September</div>
+            <div class="list__subtitle">38 transaksi • 5 Sep 2024</div>
+          </div>
+          <div class="list__meta flex-col items-end">
+            <span class="badge badge--success">Selesai</span>
+            <span class="text-xs text-tertiary">+1.5M / -2.3M</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
+    <a href="../index.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏠</span>
+      <span class="bottom-nav__label">HOME</span>
+    </a>
+    <a href="01-guild-entrance.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🔑</span>
+      <span class="bottom-nav__label">LOGIN</span>
+    </a>
+    <a href="02-guild-hall.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏰</span>
+      <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="03-inventory.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🎒</span>
+      <span class="bottom-nav__label">INVENTORY</span>
+    </a>
+    <a href="04-scroll-reading.html" class="bottom-nav__item bottom-nav__item--active">
+      <span class="bottom-nav__icon">📜</span>
+      <span class="bottom-nav__label">IMPORT</span>
+    </a>
+  </nav>
+
+  <div class="toast-container" aria-live="polite"></div>
+
+  <script>
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeToggle');
+    const stored = localStorage.getItem('ffh-theme');
+    if (stored === 'dark') root.classList.add('dark');
+    if (stored === 'light') root.classList.add('light');
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.classList.toggle('dark');
+      root.classList.remove(isDark ? 'light' : 'dark');
+      localStorage.setItem('ffh-theme', isDark ? 'dark' : 'light');
+      themeBtn.textContent = isDark ? '☀️' : '🌙';
+    });
+    if (root.classList.contains('dark')) themeBtn.textContent = '☀️';
+
+    function showToast(msg, type) {
+      type = type || 'success';
+      const c = document.querySelector('.toast-container');
+      const t = document.createElement('div');
+      t.className = 'toast toast--' + type;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.classList.add('toast--show'), 10);
+      setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      showToast('File dipilih: ' + file.name, 'info');
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('previewSection').style.display = 'block';
+      // Demo: populate with sample rows
+      const tbody = document.getElementById('previewBody');
+      tbody.innerHTML = '';
+      const sample = [
+        ['2024-10-12', 'Salary Transfer', '5000000', 'income', 'Gaji'],
+        ['2024-10-11', 'Grocery Store', '450000', 'expense', 'Makanan'],
+        ['2024-10-10', 'Fuel Station', '120000', 'expense', 'Transport'],
+        ['2024-10-09', 'Dividend', '150000', 'income', 'Investasi']
+      ];
+      sample.forEach(row => {
+        const tr = document.createElement('tr');
+        const type = row[3];
+        tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td><td class="table-cell--right table-cell--gold">' + (type==='income'?'+':'-') + parseInt(row[2]).toLocaleString('id-ID') + '</td><td><span class="badge badge--' + (type==='income'?'success':'danger') + '">' + (type==='income'?'Pemasukan':'Pengeluaran') + '</span></td><td><span class="badge badge--gold">' + row[4] + '</span></td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function resetImport() {
+      document.getElementById('fileInput').value = '';
+      document.getElementById('previewSection').style.display = 'none';
+      showToast('Import dibatalkan', 'info');
+    }
+
+    function confirmImport() {
+      showToast('4 transaksi berhasil diimport!', 'success');
+      setTimeout(resetImport, 1000);
+    }
+  </script>
+</body>
+</html>

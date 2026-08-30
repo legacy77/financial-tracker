@@ -1,0 +1,327 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guild Hall — Family Finance Hub</title>
+  <link rel="stylesheet" href="../styles/modern-theme.css">
+  <link rel="stylesheet" href="../styles/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Guild Banner (Header) with upgraded user profile & gold stats -->
+  <header class="guild-banner" role="banner">
+    <div class="container flex items-center justify-between" style="padding-top: var(--space-6); padding-bottom: var(--space-6);">
+      <div class="flex items-center gap-3">
+        <div style="width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--color-gold-500); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-family: var(--font-heading); box-shadow: var(--shadow-sm);">👑</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="guild-banner__title" style="font-size: var(--text-lg);">Keluarga Rajawali</h1>
+            <span class="badge badge--gold" style="font-size: 10px;">Lv. 5</span>
+          </div>
+          <p class="text-tertiary" style="font-size: var(--text-xs);">Guild Hall Utama</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="card p-2 flex items-center gap-2" style="background: var(--color-bg-secondary); border-radius: var(--radius-pill); padding-left: var(--space-3); padding-right: var(--space-3);">
+          <span>💰</span>
+          <span class="guild-banner__gold font-bold" style="font-size: var(--text-sm);">12.450.000</span>
+        </div>
+        <button class="btn btn--secondary" id="themeToggle" aria-label="Ganti tema" style="width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-full);">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="screen" role="main">
+    <div class="container" style="padding-top: var(--space-8); padding-bottom: var(--space-8); max-width: 720px;">
+      <!-- Page Title -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 style="margin-bottom: var(--space-1);">Guild Hall</h2>
+          <p class="text-tertiary">Ringkasan keuangan & analisa kesehatan</p>
+        </div>
+        <span class="badge badge--success">Aktif</span>
+      </div>
+
+      <!-- Financial Health Score Card (Opsi C: Card Grid) -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🏆</span>
+            <div>
+              <h3 style="font-size: var(--text-base);">Analisa Kesehatan Keuangan</h3>
+              <p class="text-tertiary text-xs">Skor Guild: <span class="font-bold text-income">82 / 100 (Sangat Sehat)</span></p>
+            </div>
+          </div>
+          <span class="badge badge--success">🟢 Aman</span>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3);">
+          <!-- Metric 1 -->
+          <div class="card p-3" style="background: var(--color-bg-tertiary); border: none;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-tertiary">Savings Ratio</span>
+              <span>📈</span>
+            </div>
+            <div class="font-bold text-base text-income">59%</div>
+            <div class="text-xs text-tertiary mt-1">Target: &gt; 30%</div>
+          </div>
+
+          <!-- Metric 2 -->
+          <div class="card p-3" style="background: var(--color-bg-tertiary); border: none;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-tertiary">Dana Darurat</span>
+              <span>🛡️</span>
+            </div>
+            <div class="font-bold text-base text-income">6.4 Bulan</div>
+            <div class="text-xs text-tertiary mt-1">Target: 6 Bulan</div>
+          </div>
+
+          <!-- Metric 3 -->
+          <div class="card p-3" style="background: var(--color-bg-tertiary); border: none;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-tertiary">Rasio Utang</span>
+              <span>⚖️</span>
+            </div>
+            <div class="font-bold text-base text-warning">28%</div>
+            <div class="text-xs text-tertiary mt-1">Batas aman: &lt; 35%</div>
+          </div>
+
+          <!-- Metric 4 -->
+          <div class="card p-3" style="background: var(--color-bg-tertiary); border: none;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-tertiary">Disiplin Budget</span>
+              <span>🎯</span>
+            </div>
+            <div class="font-bold text-base text-income">88%</div>
+            <div class="text-xs text-tertiary mt-1">Status: Konsisten</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly Quest: Income & Expense with progress -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3>Monthly Quest</h3>
+          <span class="badge badge--gold">🎯 Target Terkunci</span>
+        </div>
+        <p class="text-tertiary text-sm mb-4">Pantau pencapaian target pendapatan dan batas pengeluaran bulan ini.</p>
+
+        <!-- Income Ring -->
+        <div class="flex items-center gap-4 mb-4">
+          <svg class="progress" viewBox="0 0 80 80" style="width: 64px; height: 64px; flex-shrink: 0;">
+            <circle cx="40" cy="40" r="32" fill="none" stroke="var(--color-bg-tertiary)" stroke-width="6"></circle>
+            <circle class="progress__fill progress__fill--success" cx="40" cy="40" r="32" fill="none" stroke-width="6" stroke-dasharray="201" stroke-dashoffset="106.5"></circle>
+            <text x="40" y="45" text-anchor="middle" class="font-bold" style="font-size: 13px; fill: var(--color-income-600);">47%</text>
+          </svg>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1">
+              <span class="font-semibold text-sm">Pendapatan</span>
+              <span class="text-sm">2.340.000 / 5.000.000</span>
+            </div>
+            <div style="height: 8px; background: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
+              <div style="width: 47%; height: 100%; background: var(--color-income-500); border-radius: var(--radius-full);"></div>
+            </div>
+            <p class="text-tertiary text-xs mt-1">Sisa 12 hari memenuhi target</p>
+          </div>
+        </div>
+
+        <!-- Expense Ring -->
+        <div class="flex items-center gap-4">
+          <svg class="progress" viewBox="0 0 80 80" style="width: 64px; height: 64px; flex-shrink: 0;">
+            <circle cx="40" cy="40" r="32" fill="none" stroke="var(--color-bg-tertiary)" stroke-width="6"></circle>
+            <circle class="progress__fill progress__fill--danger" cx="40" cy="40" r="32" fill="none" stroke-width="6" stroke-dasharray="201" stroke-dashoffset="136.5"></circle>
+            <text x="40" y="45" text-anchor="middle" class="font-bold" style="font-size: 13px; fill: var(--color-expense-600);">32%</text>
+          </svg>
+          <div class="flex-1">
+            <div class="flex justify-between mb-1">
+              <span class="font-semibold text-sm">Pengeluaran</span>
+              <span class="text-sm">960.000 / 3.000.000</span>
+            </div>
+            <div style="height: 8px; background: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
+              <div style="width: 32%; height: 100%; background: var(--color-expense-500); border-radius: var(--radius-full);"></div>
+            </div>
+            <p class="text-tertiary text-xs mt-1">Sisa 12 hari</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card mb-6">
+        <div class="flex items-center justify-between p-4" style="border-bottom: 1px solid var(--color-border-light);">
+          <h3>Transaksi Terbaru</h3>
+          <a href="#" class="text-sm">Lihat semua →</a>
+        </div>
+        <div class="list p-4">
+          <div class="list__item card--interactive p-2 rounded-lg">
+            <div class="list__icon">💰</div>
+            <div class="list__content">
+              <div class="list__title">Salary Quest Complete</div>
+              <div class="list__subtitle">Gaji bulanan</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--success font-bold">+5.000.000</span>
+              <span class="list__date">Hari ini</span>
+            </div>
+          </div>
+          <div class="list__item card--interactive p-2 rounded-lg">
+            <div class="list__icon">🍔</div>
+            <div class="list__content">
+              <div class="list__title">Tavern Feast</div>
+              <div class="list__subtitle">Makan & minum</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">-450.000</span>
+              <span class="list__date">Kemarin</span>
+            </div>
+          </div>
+          <div class="list__item card--interactive p-2 rounded-lg">
+            <div class="list__icon">⛽</div>
+            <div class="list__content">
+              <div class="list__title">Mount Feed</div>
+              <div class="list__subtitle">Transportasi</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">-120.000</span>
+              <span class="list__date">2 hari lalu</span>
+            </div>
+          </div>
+          <div class="list__item card--interactive p-2 rounded-lg">
+            <div class="list__icon">🔮</div>
+            <div class="list__content">
+              <div class="list__title">Magic Investment</div>
+              <div class="list__subtitle">Dividen saham</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--success font-bold">+150.000</span>
+              <span class="list__date">3 hari lalu</span>
+            </div>
+          </div>
+          <div class="list__item card--interactive p-2 rounded-lg">
+            <div class="list__icon">🏠</div>
+            <div class="list__content">
+              <div class="list__title">Guild Rent</div>
+              <div class="list__subtitle">Perumahan</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">-2.500.000</span>
+              <span class="list__date">5 hari lalu</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card p-4 mb-6">
+        <h3 class="mb-3">Aksi Cepat</h3>
+        <div class="flex gap-3" style="flex-wrap: wrap;">
+          <button class="btn btn--primary flex-1" onclick="showToast('Form Tambah Loot dibuka', 'success')">➕ Tambah Loot</button>
+          <button class="btn btn--danger flex-1" onclick="showToast('Form Pengeluaran dibuka', 'danger')">💸 Catat Pengeluaran</button>
+        </div>
+        <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
+          <button class="btn btn--secondary flex-1" onclick="showToast('Fitur Transfer Gold dibuka', 'info')">🔄 Transfer Gold</button>
+          <a href="04-scroll-reading.html" class="btn btn--ghost flex-1" style="justify-content: center; text-decoration: none;">📜 Baca Scroll</a>
+        </div>
+      </div>
+
+      <!-- Upcoming Tributes (Bills) -->
+      <div class="card">
+        <div class="flex items-center justify-between p-4" style="border-bottom: 1px solid var(--color-border-light);">
+          <h3>Tagihan Mendatang</h3>
+          <span class="badge badge--warning">3 tagihan</span>
+        </div>
+        <div class="list p-4">
+          <div class="list__item">
+            <div class="list__icon">🏠</div>
+            <div class="list__content">
+              <div class="list__title">Guild Rent</div>
+              <div class="list__subtitle">Jatuh tempo 3 hari</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">2.500.000</span>
+              <span class="list__date">1 Des</span>
+            </div>
+          </div>
+          <div class="list__item">
+            <div class="list__icon">💡</div>
+            <div class="list__content">
+              <div class="list__title">Mana Crystal Bill</div>
+              <div class="list__subtitle">Jatuh tempo 7 hari</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">350.000</span>
+              <span class="list__date">5 Des</span>
+            </div>
+          </div>
+          <div class="list__item">
+            <div class="list__icon">📱</div>
+            <div class="list__content">
+              <div class="list__title">Communication Stone</div>
+              <div class="list__subtitle">Jatuh tempo 10 hari</div>
+            </div>
+            <div class="list__meta flex-col items-end">
+              <span class="list__amount list__amount--danger font-bold">180.000</span>
+              <span class="list__date">8 Des</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
+    <a href="../index.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏠</span>
+      <span class="bottom-nav__label">HOME</span>
+    </a>
+    <a href="01-guild-entrance.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🔑</span>
+      <span class="bottom-nav__label">LOGIN</span>
+    </a>
+    <a href="02-guild-hall.html" class="bottom-nav__item bottom-nav__item--active">
+      <span class="bottom-nav__icon">🏰</span>
+      <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="03-inventory.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🎒</span>
+      <span class="bottom-nav__label">INVENTORY</span>
+    </a>
+    <a href="04-scroll-reading.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📜</span>
+      <span class="bottom-nav__label">IMPORT</span>
+    </a>
+  </nav>
+
+  <div class="toast-container" aria-live="polite"></div>
+
+  <script>
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeToggle');
+    const stored = localStorage.getItem('ffh-theme');
+    if (stored === 'dark') root.classList.add('dark');
+    if (stored === 'light') root.classList.add('light');
+    themeBtn.addEventListener('click', () => {
+      const isDark = root.classList.toggle('dark');
+      root.classList.remove(isDark ? 'light' : 'dark');
+      localStorage.setItem('ffh-theme', isDark ? 'dark' : 'light');
+      themeBtn.textContent = isDark ? '☀️' : '🌙';
+    });
+    if (root.classList.contains('dark')) themeBtn.textContent = '☀️';
+
+    function showToast(msg, type) {
+      type = type || 'success';
+      const c = document.querySelector('.toast-container');
+      const t = document.createElement('div');
+      t.className = 'toast toast--' + type;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.classList.add('toast--show'), 10);
+      setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+  </script>
+</body>
+</html>
