@@ -157,6 +157,45 @@ Untuk persiapan implementasi *Phase 2 (Local State / CRUD)*, berikut adalah enti
 
 ---
 
-## 9. 📝 Catatan Revisi & Feedback
+## 9. 🔧 Core Missing Features & Module Specification
+
+### 9.1 Smart Category & Auto-Tagging Engine
+
+- **Auto-Rule Mapping**: Sistem membaca deskripsi mutasi dari import bank (Scroll Reading) lalu otomatis mendeteksi kategori (contoh: deskripsi `GO-PAY` / `GRAB` → otomatis masuk kategori *Transport*).
+- **Custom Category Maker**: Kemampuan keluarga membuat kategori custom dengan ikon dan warna sendiri (misal: kategori khusus *Skincare* atau *Ngopi*).
+
+### 9.2 Family Role-Based Access Control (RBAC) & Shared Vault
+
+- **Multi-Role Permissions**:
+  - *Admin (Kepala Keluarga)*: Full akses, edit semua pouch, lihat laporan keseluruhan & skor kesehatan finansial.
+  - *Co-Manager (Pasangan)*: Bisa input mutasi & bayar tagihan (*Tribute*), tapi tidak bisa mengubah konfigurasi utama Guild.
+  - *Viewer (Anak/Remaja)*: Hanya bisa melihat sisa *Gold Pouch* tertentu atau progress *Monthly Quest* mereka sendiri.
+- **Shared vs Private Pouch**: Pilihan apakah suatu rekening/dompet bisa dilihat oleh seluruh anggota keluarga atau disembunyikan (privat).
+
+### 9.3 Financial Analytics & Monthly Trend Reports
+
+- **Cashflow Trend Chart**: Grafik garis/batang bulanan (perbandingan total pemasukan vs pengeluaran dari bulan ke bulan).
+- **Expense Breakdown Pie/Donut Chart**: Visualisasi kategori pengeluaran terbanyak (misal: 40% buat cicilan, 30% buat makan).
+- **Export Report**: Fitur cetak laporan bulanan ke format PDF/CSV untuk arsip keluarga atau audit pribadi.
+
+### 9.4 Smart Notification & Reminder System
+
+- **Bill / Tribute Reminder**: Notifikasi otomatis menjelang tanggal jatuh tempo tagihan (cicilan rumah, listrik, internet) agar tidak terkena denda.
+- **Budget Alert**: Peringatan proaktif jika pengeluaran di suatu kategori sudah mencapai 80% atau 100% dari batas bulanan.
+- **Quest Milestone Alert**: Notifikasi saat target *Monthly Quest* atau level *Guild* naik.
+
+### 9.5 Gamification Reward & Penalty Loop (Retention Engine)
+
+- **XP & Guild Level Progression**: Setiap transaksi disiplin atau target tercatat, Guild mendapat XP yang membuat level naik dari Lv. 1 ke Lv. 10.
+- **Achievement Badges**: Badge khusus yang terbuka saat mencapai milestone tertentu (contoh: Badge *"Anti Bokek"* saat dana darurat tembus 6 bulan).
+- **Streak & Penalty Warning**: Indikator *Streak* harian mencatat keuangan; jika bolos lama, ada badge/status peringatan seru ala game.
+
+---
+
+## 10. 📝 Catatan Revisi & Feedback
+> *Bagian ini disiapkan untuk dicatat sebelum masuk ke pengembangan fungsional lebih lanjut.*
+- [ ] *[Tulis revisi atau catatan tambahan di sini...]*
+
+## 10. 📝 Catatan Revisi & Feedback
 > *Bagian ini disiapkan untuk dicatat sebelum masuk ke pengembangan fungsional lebih lanjut.*
 - [ ] *[Tulis revisi atau catatan tambahan di sini...]*
