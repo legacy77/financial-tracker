@@ -192,10 +192,129 @@ Untuk persiapan implementasi *Phase 2 (Local State / CRUD)*, berikut adalah enti
 
 ---
 
-## 10. 📝 Catatan Revisi & Feedback
-> *Bagian ini disiapkan untuk dicatat sebelum masuk ke pengembangan fungsional lebih lanjut.*
-- [ ] *[Tulis revisi atau catatan tambahan di sini...]*
+## 11. 📋 Implementation Specification: Phase 2
+
+### 11.1 State Management Strategy
+- **Primary Storage**: `localStorage` for lightweight key-value pairs (simple data like current guild, user preferences, UI state).
+- **Complex Data Store**: `IndexedDB` for structured, queryable data (transactions, pouches, bills, import history). Use a wrapper like `idb` or native async/await API.
+
+### 11.2 Data Schema (IndexedDB Object Stores)
+1. **Guild** store
+   - keyPath: `id`
+   - fields: `familyName`, `guildLevel`, `totalGold`, `created_at`
+
+2. **Member** store
+   - keyPath: `id`
+   - indexes: `guildId`, `role`
+
+3. **Pouch** store
+   - keyPath: `id`
+   - indexes: `guildId`, `type`
+
+4. **Transaction** store
+   - keyPath: `id`
+   - indexes: `pouchId`, `date`, `type`, `category`
+
+5. **Bill** store
+   - keyPath: `id`
+   - indexes: `dueDate`, `status`
+
+### 11.3 Core CRUD Services
+Create a thin service layer (`scripts/services/`) that wraps IndexedDB operations:
+
+```javascript
+// Example: TransactionService.js
+export const addTransaction = async (txData) => {
+  // validate, generate UUID, insert into Transaction store
+  // update Pouch balance accordingly
+};
+export const getTransactionsByPouch = async (pouchId) => { ... };
+export const updateTransaction = async (id, changes) => { ... };
+export const deleteTransaction = async (id) => { ... };
+```
+
+### 11.4 Initialization & Seed Data
+- On first run, populate IndexedDB with:
+  - Default Guild (name: "Keluarga Rajawali", level: 1, gold: 0)
+  - Default Pouches: "Gold Pouch" (Cash), "Bank Vault" (Bank)
+  - Sample Transactions & Bills for demo (can be cleared later)
+
+### 11.5 Error Handling & Offline Resilience
+- All writes are atomic; if IndexedDB fails, show toast and rollback in-memory state.
+- Provide export/import JSON backup to prevent data loss.
+
+### 11.6 Acceptance Criteria for Phase 2
+- User can create, edit, delete a Transaction and see Pouch balance update immediately.
+- Data persists after browser refresh (localStorage/IndexedDB).
+- At least 3 different Pouch types can be created and filtered.
+- Bill list can be marked as paid and disappear from "Upcoming Tributes".
+
+---
 
 ## 10. 📝 Catatan Revisi & Feedback
 > *Bagian ini disiapkan untuk dicatat sebelum masuk ke pengembangan fungsional lebih lanjut.*
 - [ ] *[Tulis revisi atau catatan tambahan di sini...]*
+
+## 11. 📋 Implementation Specification: Phase 2
+
+### 11.1 State Management Strategy
+- **Primary Storage**: `localStorage` for lightweight key-value pairs (simple data like current guild, user preferences, UI state).
+- **Complex Data Store**: `IndexedDB` for structured, queryable data (transactions, pouches, bills, import history). Use a wrapper like `idb` or native async/await API.
+
+### 11.2 Data Schema (IndexedDB Object Stores)
+1. **Guild** store
+   - keyPath: `id`
+   - fields: `familyName`, `guildLevel`, `totalGold`, `created_at`
+
+2. **Member** store
+   - keyPath: `id`
+   - indexes: `guildId`, `role`
+
+3. **Pouch** store
+   - keyPath: `id`
+   - indexes: `guildId`, `type`
+
+4. **Transaction** store
+   - keyPath: `id`
+   - indexes: `pouchId`, `date`, `type`, `category`
+
+5. **Bill** store
+   - keyPath: `id`
+   - indexes: `dueDate`, `status`
+
+### 11.3 Core CRUD Services
+Create a thin service layer (`scripts/services/`) that wraps IndexedDB operations:
+
+```javascript
+// Example: TransactionService.js
+export const addTransaction = async (txData) => {
+  // validate, generate UUID, insert into Transaction store
+  // update Pouch balance accordingly
+};
+export const getTransactionsByPouch = async (pouchId) => { ... };
+export const updateTransaction = async (id, changes) => { ... };
+export const deleteTransaction = async (id) => { ... };
+```
+
+### 11.4 Initialization & Seed Data
+- On first run, populate IndexedDB with:
+  - Default Guild (name: "Keluarga Rajawali", level: 1, gold: 0)
+  - Default Pouches: "Gold Pouch" (Cash), "Bank Vault" (Bank)
+  - Sample Transactions & Bills for demo (can be cleared later)
+
+### 11.5 Error Handling & Offline Resilience
+- All writes are atomic; if IndexedDB fails, show toast and rollback in-memory state.
+- Provide export/import JSON backup to prevent data loss.
+
+### 11.6 Acceptance Criteria for Phase 2
+- User can create, edit, delete a Transaction and see Pouch balance update immediately.
+- Data persists after browser refresh (localStorage/IndexedDB).
+- At least 3 different Pouch types can be created and filtered.
+- Bill list can be marked as paid and disappear from "Upcoming Tributes".
+
+---
+
+## 10. 📝 Catatan Revisi & Feedback
+> *Bagian ini disiapkan untuk dicatat sebelum masuk ke pengembangan fungsional lebih lanjut.*
+- [ ] *[Tulis revisi atau catatan tambahan di sini...]*
+
