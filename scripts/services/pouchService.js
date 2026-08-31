@@ -1,0 +1,34 @@
+﻿// ============================================================
+// scripts/services/pouchService.js — Pouch & Vault CRUD
+// KelolaRacun Phase 2
+// ============================================================
+
+import { add, getAll, getById, put, remove } from '../db.js';
+
+const STORE = 'pouches';
+
+export async function getPouches() {
+  return await getAll(STORE);
+}
+
+export async function getPouch(id) {
+  return await getById(STORE, id);
+}
+
+export async function createPouch(data) {
+  const pouch = {
+    id: 'pouch-' + Date.now(),
+    guildId: data.guildId || 'guild-1',
+    name: data.name,
+    type: data.type || 'Cash',
+    balance: Number(data.balance) || 0
+  };
+  return await add(STORE, pouch);
+}
+
+export async function updatePouchBalance(pouchId, amountChange) {
+  const pouch = await getPouch(pouchId);
+  if (!pouch) throw new Error('Pouch not found');
+  pouch.balance += Number(amountChange);
+  return await put(STORE, pouch);
+}
