@@ -6,11 +6,11 @@ Manajemen keuangan keluarga **ala RPG fantasy** — ngatur gold, ngejar target M
 
 ---
 
-## 🛠️ Tech Stack (Production Ready)
+## 🛠️ Tech Stack (Production Ready & Phase 2 Implemented)
 
 - **Core Frontend**: HTML5, Vanilla CSS (Design Tokens, Custom CSS Properties)
-- **Scripting**: Modern JavaScript (ES6+ Modular, DOM Manipulation)
-- **State & Storage**: LocalStorage / IndexedDB *(Persiapan Phase 2 CRUD)*
+- **Scripting**: Modern JavaScript (ES6+ Modular, DOM Manipulation, ES Modules)
+- **State & Storage**: **IndexedDB** (Native Promise-based wrapper) + LocalStorage
 - **Typography**: Google Fonts (*Poppins* for headers, *Nunito* for body, *JetBrains Mono* for numbers/gold)
 - **Theme Engine**: Dynamic Dark/Light Mode with CSS Variables & `localStorage` sync
 - **Hosting / Deploy**: Static Site Hosting (GitHub Pages, Netlify, Vercel)
@@ -30,9 +30,9 @@ Manajemen keuangan keluarga **ala RPG fantasy** — ngatur gold, ngejar target M
 
 ---
 
-## 🗂️ Struktur Folder (Ideal Development & Production)
+## 🗂️ Struktur Folder (Aktif & Modular)
 
-Struktur direktori modular yang dirancang bersih untuk scale-up menuju fungsionalitas CRUD dan backend sync:
+Struktur direktori proyek yang sudah diimplementasikan hingga **Phase 2 (IndexedDB CRUD)**:
 
 ```
 ├── index.html                     # 🌐 Landing page / Welcome screen
@@ -45,8 +45,14 @@ Struktur direktori modular yang dirancang bersih untuk scale-up menuju fungsiona
 ├── styles/                        # 🎨 Styling & Design System
 │   ├── modern-theme.css           # Design tokens (light/dark colors & variables)
 │   └── components.css             # Reusable UI components (cards, badges, buttons)
-├── scripts/                       # ⚡ [Phase 2] JavaScript logic & state management
-└── assets/                        # 🖼️ [Phase 3] Images, icons, and fonts
+└── scripts/                       # ⚡ Phase 2: State Management & IndexedDB Services
+    ├── db.js                      # IndexedDB Wrapper (Promise-based stores & generic CRUD)
+    ├── app.js                     # Main Entry Point & window.KelolaRacun API exposure
+    └── services/                  # Thin CRUD Service Layer
+        ├── guildService.js        # Guild data & initial seed data (Keluarga Rajawali)
+        ├── pouchService.js        # Pouch CRUD & balance sync operations
+        ├── transactionService.js  # Transaction CRUD with auto-balance updates
+        └── billService.js         # Bill & Tribute management (Paid/Pending toggle)
 ```
 
 ---
@@ -68,7 +74,7 @@ Tanpa build step yang berat. Cukup push folder root ke static hosting pilihan An
 ```bash
 git init
 git add .
-git commit -m "feat: initial release of KelolaRacun"
+git commit -m "feat: release KelolaRacun with Phase 2 IndexedDB persistence"
 git branch -M development
 git remote add origin https://github.com/legacy77/financial-tracker.git
 git push -u origin development
