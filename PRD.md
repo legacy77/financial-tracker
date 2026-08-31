@@ -1,5 +1,5 @@
 ﻿# 📄 Product Requirements Document (PRD)
-## 🏰 Family Finance Hub (FFH)
+## 💜 KelolaRacun — Family Finance Hub (Rebrand)
 
 > **Status**: Draft / Enhanced & Validated  
 > **Target Platform**: Web (Static Site / PWA ready)  
@@ -9,9 +9,9 @@
 
 ## 1. 🎯 Overview & Tujuan Produk
 
-**Family Finance Hub (FFH)** adalah aplikasi manajemen keuangan keluarga yang menggabungkan elemen gamifikasi RPG (Role-Playing Game) dengan estetika SaaS modern (mengadopsi estetika bersih ala Saweria & KOL.id). 
+**KelolaRacun** adalah aplikasi manajemen keuangan keluarga yang menggabungkan elemen gamifikasi RPG (Role-Playing Game) dengan estetika SaaS modern (mengadopsi estetika bersih ala Saweria & KOL.id). 
 
-Tujuannya adalah menghilangkan kesan "membosankan" dan "menakutkan" dalam mengelola keuangan rumah tangga, menjadikannya pengalaman yang interaktif, menyenangkan, dan transparan bagi seluruh anggota keluarga.
+Tujuannya adalah menghilangkan kesan "membosankan" dan "menakutkan" dalam mengelola keuangan rumah tangga, menjadikannya pengalaman yang interaktif, menyenangkan, dan transparan bagi seluruh anggota keluarga. Nama *KelolaRacun* merepresentasikan analogi "racun" sebagai pengeluaran konsumtif, dengan misi seru: "kelola racun-mu, raih goal-mu!".
 
 ---
 
@@ -25,10 +25,10 @@ Tujuannya adalah menghilangkan kesan "membosankan" dan "menakutkan" dalam mengel
 
 ## 3. ⚔️ Competitive Analysis (Analisis Kompetitor)
 
-| Fitur / Aspek | Tradisional Apps (Money Manager, Spendee) | YNAB (You Need A Budget) | 🏰 Family Finance Hub (FFH) |
+| Fitur / Aspek | Tradisional Apps (Money Manager, Spendee) | YNAB (You Need A Budget) | 💜 KelolaRacun |
 |---|---|---|---|
 | **Fokus Utama** | Tracking mutasi rekening & ledger | Zero-based budgeting ketat | Kolaborasi keluarga + gamifikasi RPG |
-| **Vibe & UI** | Form-heavy, kaku, korporat | Fungsional, text-heavy, agak kompleks | Clean SaaS pastel + RPG fantasy theme (fun, engaging) |
+| **Vibe & UI** | Form-heavy, kaku, korporat | Fungsional, text-heavy, agak kompleks | Clean SaaS pastel + GenZ slang (Indonesia) + RPG fantasy theme |
 | **Kesehatan Finansial** | Grafik standar / pie chart | Net worth tracking | **Financial Health Score** (Skor 0-100 dengan 4 metrik spesifik) |
 | **Onboarding Pengguna** | Cenderung melelahkan bagi pemula | Kurva belajar tinggi | Cepat, instan, tanpa registrasi awal (mockup/PWA ready) |
 
