@@ -4,16 +4,18 @@
 // ============================================================
 
 import { openDB } from './db.js';
-import { initSeedData, getGuild } from './services/guildService.js';
+import { initSeedData, getGuild, updateGuild } from './services/guildService.js';
 import { getPouches, createPouch, getPouch } from './services/pouchService.js';
 import { getTransactions, addTransaction, getTransactionsByPouch } from './services/transactionService.js';
 import { getBills, getPendingBills, addBill, togglePaid } from './services/billService.js';
+import { initCategorySeed, getCategories, createCategory, deleteCategory } from './services/categoryService.js';
 
 // ---- Initialize Database ----
 export async function initApp() {
   try {
     await openDB();
     await initSeedData();
+    await initCategorySeed();
     console.log('🏰 KelolaRacun DB initialized & seeded');
   } catch (err) {
     console.error('❌ Failed to init KelolaRacun DB:', err);
@@ -43,6 +45,7 @@ export function showToast(message, type = 'success') {
 // ---- Expose Service API ----
 window.KelolaRacun = {
   getGuild,
+  updateGuild,
   getPouches,
   createPouch,
   getPouch,
@@ -53,6 +56,9 @@ window.KelolaRacun = {
   getPendingBills,
   addBill,
   togglePaid,
+  getCategories,
+  createCategory,
+  deleteCategory,
   showToast
 };
 

@@ -4,10 +4,11 @@
 // ============================================================
 
 import { initApp, showToast } from '../app.js';
-import { getGuild } from '../services/guildService.js';
+import { getGuild, updateGuild } from '../services/guildService.js';
 import { getPouches, createPouch } from '../services/pouchService.js';
 import { getTransactions, addTransaction } from '../services/transactionService.js';
 import { getBills, getPendingBills, addBill, togglePaid } from '../services/billService.js';
+import { getCategories, createCategory, deleteCategory } from '../services/categoryService.js';
 
 import { subscribe } from '../core/eventBus.js';
 import {
@@ -18,6 +19,7 @@ import {
   getState, getLevelInfo, getAchievements
 } from '../core/gamification.js';
 import { exportBackup, downloadBackup, restoreBackup, resetAllData } from '../core/backupService.js';
+import { computeHealthScore } from '../core/healthScore.js';
 
 let chartInstances = {};
 
@@ -27,7 +29,7 @@ async function fetchAll() {
     getGuild(),
     getPouches(),
     getTransactions(),
-    getPendingBills()
+    getBills()
   ]);
   return { guild, pouches, transactions, bills };
 }
@@ -62,6 +64,62 @@ function renderGamification(state) {
   if (xpDisplay) xpDisplay.textContent = `Lv.${levelInfo.level} ⚡${state.xp}XP`;
   if (streak) streak.textContent = state.currentStreak;
   if (longest) longest.textContent = state.longestStreak;
+}
+
+function renderHealthScore(health) {
+  const scoreEl = document.getElementById('hsScore');
+  const badgeEl = document.getElementById('hsBadge');
+  const els = {
+    hsSavings: health.savingsRatio + '%',
+    hsEmergency: health.emergencyFundMonths + ' Bulan',
+    hsDebt: health.debtRatio + '%',
+    hsBudget: health.budgetDiscipline + '%'
+  };
+  for (const [id, val] of Object.entries(els)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  if (scoreEl) {
+    scoreEl.textContent = `${health.overall} / 100 (${health.status.label})`;
+    scoreEl.className = `font-bold ${health.overall >= 75 ? 'text-income' : health.overall >= 50 ? 'text-warning' : 'text-expense'}`;
+  }
+  if (badgeEl) {
+    badgeEl.textContent = `${health.status.icon} ${health.status.label}`;
+    badgeEl.className = `badge badge--${health.status.badge}`;
+  }
+}
+
+function renderMonthlyQuest(guild, { monthIncome, monthExpense }) {
+  const incomeTarget = guild?.monthlyTargetIncome || 5000000;
+  const expenseTarget = guild?.monthlyTargetExpense || 3000000;
+
+  const incPct = Math.min(100, Math.round((monthIncome / incomeTarget) * 100));
+  const expPct = Math.min(100, Math.round((monthExpense / expenseTarget) * 100));
+
+  // SVG ring: circumference approx 201
+  const setRing = (ringId, pctId, pct) => {
+    const ring = document.getElementById(ringId);
+    const label = document.getElementById(pctId);
+    if (ring) ring.setAttribute('stroke-dashoffset', String(201 - (201 * pct) / 100));
+    if (label) label.textContent = pct + '%';
+  };
+  setRing('mqIncomeRing', 'mqIncomePct', incPct);
+  setRing('mqExpenseRing', 'mqExpensePct', expPct);
+
+  const incBar = document.getElementById('mqIncomeBar');
+  const expBar = document.getElementById('mqExpenseBar');
+  if (incBar) incBar.style.width = incPct + '%';
+  if (expBar) expBar.style.width = expPct + '%';
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('mqIncomeAmt', formatRupiah(monthIncome));
+  set('mqIncomeTarget', formatRupiah(incomeTarget));
+  set('mqExpenseAmt', formatRupiah(monthExpense));
+  set('mqExpenseTarget', formatRupiah(expenseTarget));
+
+  const daysLeft = Math.max(0, Math.ceil((new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1) - Date.now()) / 86400000));
+  set('mqIncomeFooter', `Sisa ${daysLeft} hari memenuhi target`);
+  set('mqExpenseFooter', monthExpense > expenseTarget ? '⚠️ Melebihi batas taget!' : `Sisa ${daysLeft} hari`);
 }
 
 function renderRecentTransactions(transactions) {
@@ -341,6 +399,83 @@ window.handleBackupRestore = async function(e) {
   }
 };
 
+async function renderCategoryList() {
+  const list = document.getElementById('catList');
+  if (!list) return;
+  const cats = await getCategories();
+  list.innerHTML = cats.map(c => `
+    <div class="list__item p-2" style="border-bottom: 1px solid var(--color-border-light);">
+      <div class="list__icon">${escapeHtml(c.icon || '🏷️')}</div>
+      <div class="list__content">
+        <div class="list__title font-semibold">${escapeHtml(c.name)}</div>
+        <div class="list__subtitle">${c.type === 'Income' ? 'Pemasukan' : 'Pengeluaran'}</div>
+      </div>
+      <button class="btn btn--ghost cat-delete" data-cat="${c.id}" style="color: var(--color-expense-500); font-size: 12px;">✕</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.cat-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await deleteCategory(btn.dataset.cat);
+        showToast('Kategori dihapus', 'info');
+        renderCategoryList();
+      } catch (err) {
+        showToast('Gagal hapus: ' + err.message, 'danger');
+      }
+    });
+  });
+}
+
+function setupQuestModalForm() {
+  const btn = document.getElementById('btnEditQuest');
+  const form = document.getElementById('questModalForm');
+  if (btn) btn.addEventListener('click', () => {
+    const income = document.getElementById('questIncome');
+    const expense = document.getElementById('questExpense');
+    if (income && expense && window._guild) {
+      income.value = window._guild.monthlyTargetIncome || 5000000;
+      expense.value = window._guild.monthlyTargetExpense || 3000000;
+    }
+    openModal('questModal');
+  });
+  if (form) form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await updateGuild({
+        monthlyTargetIncome: Number(form.questIncome.value) || 5000000,
+        monthlyTargetExpense: Number(form.questExpense.value) || 3000000
+      });
+      showToast('Target quest diperbarui! 🎯', 'success');
+      closeModal('questModal');
+    } catch (err) {
+      showToast('Gagal update target: ' + err.message, 'danger');
+    }
+  });
+}
+
+function setupCategoryModal() {
+  const form = document.getElementById('catForm');
+  if (form && !form.dataset.bound) {
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await createCategory({
+          name: form.catName.value,
+          icon: form.catIcon.value || '🏷️',
+          type: form.catType.value
+        });
+        showToast('Kategori ditambahkan! 🏷️', 'success');
+        form.reset();
+        renderCategoryList();
+      } catch (err) {
+        showToast('Gagal tambah kategori: ' + err.message, 'danger');
+      }
+    });
+  }
+}
+
 // ---- Modal Forms ----
 function populatePouchSelect(selectEl, pouches, selectedId) {
   if (!selectEl) return;
@@ -454,6 +589,12 @@ function setupBillModalForm(showToastFn) {
   renderGamification(gamificationState);
   renderCharts(data.transactions);
 
+  // Financial Health Score & Monthly Quest (computed from real data)
+  const health = await computeHealthScore(data);
+  renderHealthScore(health);
+  renderMonthlyQuest(data.guild, health);
+  window._guild = data.guild;
+
   // Populate pouch select in transaction modal
   const txModalForm = document.getElementById('txModalForm');
   if (txModalForm) populatePouchSelect(txModalForm.pouchId, data.pouches);
@@ -469,6 +610,7 @@ function setupBillModalForm(showToastFn) {
         const titleEl = document.getElementById('txModalTitle');
         if (titleEl) titleEl.textContent = type === 'Income' ? '➕ Tambah Loot (Pemasukan)' : '💸 Catat Pengeluaran';
       }
+      if (modalId === 'catModal') renderCategoryList();
       openModal(modalId);
     });
   });
@@ -479,6 +621,17 @@ function setupBillModalForm(showToastFn) {
   setupBillModalForm(showToast);
   setupExportPdf(data.transactions);
   setupBackup();
+  setupQuestModalForm();
+  setupCategoryModal();
+
+  // Category selection in transaction form (list from categories store)
+  const catSelect = document.getElementById('txCategory');
+  if (catSelect) {
+    const cats = await getCategories();
+    catSelect.innerHTML = cats.map(c =>
+      `<option value="${escapeHtml(c.name)}">${escapeHtml(c.icon || '🏷️')} ${escapeHtml(c.name)}</option>`
+    ).join('');
+  }
 
   // Achievements modal
   const achBtn = document.getElementById('openAchievements');
@@ -505,6 +658,11 @@ function setupBillModalForm(showToastFn) {
     renderRecentTransactions(fresh.transactions);
     renderBills(fresh.bills);
     renderCharts(fresh.transactions);
+    try {
+      const h = await computeHealthScore(fresh);
+      renderHealthScore(h);
+      renderMonthlyQuest(fresh.guild, h);
+    } catch (err) { console.warn('Health score refresh gagal:', err); }
     try { renderGamification(await getState()); } catch (err) {}
   });
 
