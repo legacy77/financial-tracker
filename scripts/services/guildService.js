@@ -4,6 +4,7 @@
 // ============================================================
 
 import { add, getAll, put } from '../db.js';
+import { publish } from '../core/eventBus.js';
 
 const GUILD_STORE = 'guilds';
 const POUCH_STORE = 'pouches';
@@ -19,6 +20,8 @@ export async function initSeedData() {
       familyName: 'Keluarga Rajawali',
       guildLevel: 5,
       totalGold: 14500000,
+      monthlyTargetIncome: 5000000,
+      monthlyTargetExpense: 3000000,
       created_at: new Date().toISOString()
     };
     await add(GUILD_STORE, defaultGuild);
@@ -38,4 +41,13 @@ export async function initSeedData() {
 export async function getGuild() {
   const guilds = await getAll(GUILD_STORE);
   return guilds[0] || null;
+}
+
+export async function updateGuild(changes) {
+  const guild = await getGuild();
+  if (!guild) throw new Error('Guild not found');
+  const merged = { ...guild, ...changes };
+  const saved = await put(GUILD_STORE, merged);
+  publish('kelola-racun:updated', { type: 'guild' });
+  return saved;
 }

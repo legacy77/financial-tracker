@@ -4,7 +4,7 @@
 // ============================================================
 
 const DB_NAME = 'kelola_racun_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance = null;
 
@@ -15,7 +15,8 @@ const SCHEMA = {
   pouches:       { keyPath: 'id', indexes: ['guildId', 'type'] },
   transactions:  { keyPath: 'id', indexes: ['pouchId', 'date', 'type', 'category'] },
   bills:         { keyPath: 'id', indexes: ['dueDate', 'status'] },
-  gamification:  { keyPath: 'id', indexes: [] }
+  gamification:  { keyPath: 'id', indexes: [] },
+  categories:    { keyPath: 'id', indexes: ['name'] }
 };
 
 /**
