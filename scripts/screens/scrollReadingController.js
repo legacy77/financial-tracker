@@ -8,6 +8,7 @@ import { getGuild } from '../services/guildService.js';
 import { getPouches } from '../services/pouchService.js';
 import { addTransaction } from '../services/transactionService.js';
 import { formatRupiah, setupModalClose, escapeHtml } from '../core/helpers.js';
+import { autoTag } from '../core/autoTag.js';
 
 let importedRows = [];
 
@@ -62,8 +63,10 @@ function parseCSV(text) {
       const rawAmt = Number(cols[2].replace(/[^0-9.-]+/g, '')) || 0;
       const type = rawAmt >= 0 ? 'Income' : 'Expense';
       const amount = Math.abs(rawAmt);
-      const category = cols[3] || (type === 'Income' ? 'Gaji/Lainnya' : 'Pengeluaran Umum');
-      
+      const providedCat = cols[3] || '';
+      const tagged = autoTag(desc);
+      const category = providedCat || tagged.category;
+
       importedRows.push({ date, desc, amount, type, category });
     }
   }

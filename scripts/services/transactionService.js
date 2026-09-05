@@ -6,6 +6,7 @@
 import { add, getAll, getById, put, remove } from '../db.js';
 import { updatePouchBalance } from './pouchService.js';
 import { publish } from '../core/eventBus.js';
+import { onTransactionAdded } from '../core/gamification.js';
 
 const STORE = 'transactions';
 
@@ -33,6 +34,11 @@ export async function addTransaction(txData) {
   await updatePouchBalance(tx.pouchId, amountChange);
   const saved = await add(STORE, tx);
   publish('kelola-racun:updated', { type: 'transaction' });
+  try {
+    await onTransactionAdded(tx.type);
+  } catch (err) {
+    console.warn('Gamification update gagal:', err);
+  }
   return saved;
 }
 

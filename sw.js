@@ -3,15 +3,20 @@
 // KelolaRacun Phase 3
 // ============================================================
 
-const CACHE_NAME = 'kelolaracun-v1';
+const CACHE_NAME = 'kelolaracun-v2';
 const ASSETS = [
   './index.html',
   './styles/modern-theme.css',
   './styles/components.css',
+  './styles/print.css',
+  './vendor/chart.umd.js',
   './scripts/app.js',
   './scripts/db.js',
   './scripts/core/helpers.js',
   './scripts/core/eventBus.js',
+  './scripts/core/gamification.js',
+  './scripts/core/autoTag.js',
+  './scripts/core/backupService.js',
   './scripts/services/guildService.js',
   './scripts/services/pouchService.js',
   './scripts/services/transactionService.js',

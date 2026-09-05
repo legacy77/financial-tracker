@@ -5,6 +5,7 @@
 
 import { add, getAll, getById, put, remove } from '../db.js';
 import { publish } from '../core/eventBus.js';
+import { onBillPaid, onBillAdded } from '../core/gamification.js';
 
 const STORE = 'bills';
 
@@ -27,6 +28,7 @@ export async function addBill(billData) {
   };
   const saved = await add(STORE, bill);
   publish('kelola-racun:updated', { type: 'bill' });
+  try { await onBillAdded(); } catch (err) { console.warn('Gamification update gagal:', err); }
   return saved;
 }
 
@@ -36,5 +38,8 @@ export async function togglePaid(billId) {
   bill.status = bill.status === 'Paid' ? 'Pending' : 'Paid';
   const saved = await put(STORE, bill);
   publish('kelola-racun:updated', { type: 'bill' });
+  if (bill.status === 'Paid') {
+    try { await onBillPaid(); } catch (err) { console.warn('Gamification update gagal:', err); }
+  }
   return saved;
 }
