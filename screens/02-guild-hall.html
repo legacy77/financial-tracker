@@ -6,6 +6,8 @@
   <title>Guild Hall — Family Finance Hub</title>
   <link rel="stylesheet" href="../styles/modern-theme.css">
   <link rel="stylesheet" href="../styles/components.css">
+  <link rel="stylesheet" href="../styles/print.css">
+  <script src="../vendor/chart.umd.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -27,7 +29,11 @@
       <div class="flex items-center gap-3">
         <div class="card p-2 flex items-center gap-2" style="background: var(--color-bg-secondary); border-radius: var(--radius-pill); padding-left: var(--space-3); padding-right: var(--space-3);">
           <span>💰</span>
-          <span class="guild-banner__gold font-bold" style="font-size: var(--text-sm);">12.450.000</span>
+          <span class="guild-banner__gold font-bold" style="font-size: var(--text-sm);">Memuat...</span>
+        </div>
+        <div id="xpBadge" class="card p-2 flex items-center gap-1" style="background: var(--color-bg-secondary); border-radius: var(--radius-pill); padding-left: var(--space-3); padding-right: var(--space-3); cursor: pointer;" title="Klik untuk lihat achievement">
+          <span>⚡</span>
+          <span id="xpDisplay" class="font-bold" style="font-size: 11px; color: var(--color-gold-600);">Lv.1</span>
         </div>
         <button class="btn btn--secondary" id="themeToggle" aria-label="Ganti tema" style="width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-full);">🌙</button>
       </div>
@@ -144,8 +150,45 @@
             <div style="height: 8px; background: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
               <div style="width: 32%; height: 100%; background: var(--color-expense-500); border-radius: var(--radius-full);"></div>
             </div>
-            <p class="text-tertiary text-xs mt-1">Sisa 12 hari</p>
+<p class="text-tertiary text-xs mt-1">Sisa 12 hari</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Guild Progress & Streak -->
+      <div class="card p-4 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 style="font-size: var(--text-base);">Guild Progress</h3>
+          <button class="btn btn--ghost" id="openAchievements" style="font-size: 12px; padding: 4px 10px;">🏅 Achievement</button>
+        </div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="font-bold" id="levelLabel" style="font-size: var(--text-lg);">Lv. 1</span>
+          <div style="flex: 1; height: 10px; background: var(--color-bg-tertiary); border-radius: var(--radius-full); overflow: hidden;">
+            <div id="xpBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--color-gold-400), var(--color-gold-500)); border-radius: var(--radius-full); transition: width 0.5s ease;"></div>
+          </div>
+          <span id="xpCount" class="text-tertiary text-xs">0 / 200 XP</span>
+        </div>
+        <div class="flex gap-4 text-sm">
+          <span>🔥 Streak: <b id="streakCount">0</b> hari</span>
+          <span>💀 Terpanjang: <b id="longestStreak">0</b> hari</span>
+        </div>
+      </div>
+
+      <!-- Analytics Charts -->
+      <div class="card p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📊</span>
+            <h3 style="font-size: var(--text-base);">Analitik Keuangan</h3>
+          </div>
+          <span class="badge badge--info">6 bulan terakhir</span>
+        </div>
+        <p class="text-tertiary text-sm mb-4">Cashflow & breakdown pengeluaran bulanan.</p>
+        <div style="position: relative; height: 220px; margin-bottom: 24px;">
+          <canvas id="cashflowChart" aria-label="Grafik cashflow bulanan" role="img"></canvas>
+        </div>
+        <div style="position: relative; height: 220px;">
+          <canvas id="expenseChart" aria-label="Grafik breakdown pengeluaran" role="img"></canvas>
         </div>
       </div>
 
@@ -159,6 +202,10 @@
         <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
           <button class="btn btn--secondary flex-1" data-open-modal="pouchModal">🏛️ Tambah Pouch</button>
           <button class="btn btn--ghost flex-1" data-open-modal="billModal">📜 Tambah Tagihan</button>
+        </div>
+        <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
+          <button id="btnExportPdf" class="btn btn--ghost flex-1" style="justify-content: center;">📄 Export Laporan (PDF)</button>
+          <button id="btnBackup" class="btn btn--ghost flex-1" style="justify-content: center;">💾 Backup / Restore</button>
         </div>
       </div>
 
@@ -306,6 +353,49 @@
           <button type="submit" class="btn btn--primary">Simpan Tagihan</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Achievement Gallery Modal -->
+  <div class="modal" id="achModal" role="dialog" aria-modal="true" aria-labelledby="achModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content" style="max-width: 560px;">
+      <div class="modal__header">
+        <h3 class="modal__title" id="achModalTitle">🏅 Gallery Achievement</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <div class="modal__body">
+        <p class="text-tertiary text-sm mb-4">Capai milestone untuk membuka achievement baru!</p>
+        <div id="achGrid" class="ach-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backup / Restore Modal -->
+  <div class="modal" id="backupModal" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="backupModalTitle">💾 Backup & Restore</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <div class="modal__body">
+        <p class="text-tertiary text-sm mb-4">Download data sebagai JSON atau restore dari backup sebelumnya.</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button id="btnBackupDownload" class="btn btn--primary w-full" style="justify-content: center;">
+            📥 Download Backup JSON
+          </button>
+          <label class="btn btn--secondary" style="justify-content: center; cursor: pointer;">
+            📤 Restore dari File
+            <input type="file" id="backupFileInput" accept=".json" class="sr-only" onchange="window.handleBackupRestore(event)">
+          </label>
+          <hr class="divider">
+          <button id="btnResetAll" class="btn btn--danger w-full" style="justify-content: center;">
+            🗑️ Reset Semua Data
+          </button>
+          <p class="text-xs text-tertiary text-center">Reset akan menghapus seluruh data. Gunakan backup terlebih dahulu.</p>
+        </div>
+      </div>
     </div>
   </div>
 
