@@ -3,3 +3,19 @@
 Thumbs.db
 *.log
 .vscode/
+
+# opencode config (local per developer)
+.opencode/
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# OS temp
+.DS_Store
+Thumbs.db

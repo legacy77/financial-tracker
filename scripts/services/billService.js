@@ -4,6 +4,7 @@
 // ============================================================
 
 import { add, getAll, getById, put, remove } from '../db.js';
+import { publish } from '../core/eventBus.js';
 
 const STORE = 'bills';
 
@@ -24,12 +25,16 @@ export async function addBill(billData) {
     dueDate: billData.dueDate,
     status: 'Pending'
   };
-  return await add(STORE, bill);
+  const saved = await add(STORE, bill);
+  publish('kelola-racun:updated', { type: 'bill' });
+  return saved;
 }
 
 export async function togglePaid(billId) {
   const bill = await getById(STORE, billId);
   if (!bill) throw new Error('Bill not found');
   bill.status = bill.status === 'Paid' ? 'Pending' : 'Paid';
-  return await put(STORE, bill);
+  const saved = await put(STORE, bill);
+  publish('kelola-racun:updated', { type: 'bill' });
+  return saved;
 }

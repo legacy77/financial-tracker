@@ -29,110 +29,96 @@
         <h2 class="mb-1">Inventory Pouch</h2>
         <p class="text-tertiary">Kelola dompet, rekening bank, dan aset investasi</p>
       </div>
-      <button class="btn btn--primary" onclick="showToast('Fitur Tambah Pouch segera hadir!', 'info')">+ Pouch Baru</button>
+      <button class="btn btn--primary" data-open-modal="pouchModal">+ Pouch Baru</button>
     </div>
 
-    <!-- Pouches List -->
+    <!-- Pouches List (dynamic) -->
     <div class="card p-6 mb-6">
       <h3 class="mb-4">Daftar Pouch</h3>
-      <div class="list">
-        <div class="list__item card--interactive p-3 rounded-lg" style="border: 1px solid var(--color-border-light);">
-          <div class="list__icon text-2xl">💰</div>
-          <div class="list__content">
-            <div class="list__title font-bold">Gold Pouch</div>
-            <div class="list__subtitle">Dompet utama • Aktif</div>
-          </div>
-          <div class="list__meta flex-col items-end">
-            <span class="list__amount list__amount--success font-bold text-base">8.500.000</span>
-            <span class="badge badge--success mt-1">Utama</span>
-          </div>
-        </div>
-
-        <div class="list__item card--interactive p-3 rounded-lg" style="border: 1px solid var(--color-border-light);">
-          <div class="list__icon text-2xl">🏦</div>
-          <div class="list__content">
-            <div class="list__title font-bold">Bank Vault</div>
-            <div class="list__subtitle">Tabungan • Dana darurat</div>
-          </div>
-          <div class="list__meta flex-col items-end">
-            <span class="list__amount list__amount--info font-bold text-base">3.200.000</span>
-            <span class="badge badge--info mt-1">Tabungan</span>
-          </div>
-        </div>
-
-        <div class="list__item card--interactive p-3 rounded-lg" style="border: 1px solid var(--color-border-light);">
-          <div class="list__icon text-2xl">🔮</div>
-          <div class="list__content">
-            <div class="list__title font-bold">Magic Satchel</div>
-            <div class="list__subtitle">Investasi • Saham & Kripto</div>
-          </div>
-          <div class="list__meta flex-col items-end">
-            <span class="list__amount list__amount--success font-bold text-base">750.000</span>
-            <span class="badge badge--gold mt-1">Investasi</span>
-          </div>
-        </div>
+      <div class="list pouches-list">
+        <p class="text-tertiary text-sm p-4">Memuat pouch...</p>
       </div>
     </div>
 
-    <!-- Selected Pouch Detail & Activity -->
-    <div class="card p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h3>Detail: Gold Pouch</h3>
-        <span class="badge badge--success">Checking</span>
-      </div>
-
-      <div class="flex gap-4 mb-6" style="flex-wrap: wrap;">
-        <div class="flex-1">
-          <p class="text-tertiary text-sm">Saldo Saat Ini</p>
-          <p class="text-2xl font-bold text-income">8.500.000 IDR</p>
-        </div>
-        <div class="flex gap-2 items-center">
-          <button class="btn btn--secondary" onclick="showToast('Edit pouch', 'info')">✏️ Edit</button>
-          <button class="btn btn--danger" onclick="showToast('Pouch diarsipkan', 'danger')">🗑️ Arsip</button>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <h4 class="mb-3">Aktivitas Terakhir</h4>
-      <div style="overflow-x: auto;">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Tanggal</th>
-              <th>Deskripsi</th>
-              <th class="table-cell--right">Kategori</th>
-              <th class="table-cell--right">Jumlah</th>
-              <th class="table-cell--center">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Hari ini</td>
-              <td>Salary Quest Complete</td>
-              <td class="table-cell--right"><span class="badge badge--gold">Income</span></td>
-              <td class="table-cell--right table-cell--gold">+5.000.000</td>
-              <td class="table-cell--center"><span class="badge badge--success">Cleared</span></td>
-            </tr>
-            <tr>
-              <td>Kemarin</td>
-              <td>Tavern Feast</td>
-              <td class="table-cell--right"><span class="badge badge--danger">Food</span></td>
-              <td class="table-cell--right table-cell--gold">-450.000</td>
-              <td class="table-cell--center"><span class="badge badge--success">Cleared</span></td>
-            </tr>
-            <tr>
-              <td>2 hari lalu</td>
-              <td>Mount Feed</td>
-              <td class="table-cell--right"><span class="badge badge--danger">Transport</span></td>
-              <td class="table-cell--right table-cell--gold">-120.000</td>
-              <td class="table-cell--center"><span class="badge badge--warning">Pending</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Selected Pouch Detail & Activity (dynamic) -->
+    <div class="card p-6 pouch-detail-section">
+      <p class="text-tertiary">Memuat detail pouch...</p>
     </div>
   </main>
+
+  <!-- Modals -->
+  <div class="modal" id="pouchModal" role="dialog" aria-modal="true" aria-labelledby="pouchModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="pouchModalTitle">🏛️ Tambah Pouch Baru</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="pouchModalForm" class="modal__body">
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchName">Nama Pouch</label>
+          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchType">Tipe</label>
+          <select id="pouchType" name="pouchType" class="modal__select" required>
+            <option value="Cash">💰 Cash</option>
+            <option value="Bank">🏦 Bank</option>
+            <option value="Investment">🔮 Investasi</option>
+            <option value="E-Wallet">📱 E-Wallet</option>
+          </select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchBalance">Saldo Awal (IDR)</label>
+          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1000" placeholder="0">
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Buat Pouch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="txModal" role="dialog" aria-modal="true" aria-labelledby="invTxTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="invTxTitle">➕ Tambah Transaksi</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="invTxForm" class="modal__body">
+        <div class="modal__form-group">
+          <label class="modal__label" for="invPouchId">Pouch</label>
+          <select id="invPouchId" name="pouchId" class="modal__select" required></select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="invTxType">Tipe</label>
+          <select id="invTxType" name="type" class="modal__select" required>
+            <option value="Income">💰 Pemasukan</option>
+            <option value="Expense">💸 Pengeluaran</option>
+            <option value="Transfer">🔄 Transfer</option>
+          </select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="invTxCategory">Kategori</label>
+          <input type="text" id="invTxCategory" name="category" class="modal__input" placeholder="Contoh: Gaji, Investasi, Makanan" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="invTxAmount">Nominal (IDR)</label>
+          <input type="number" id="invTxAmount" name="amount" class="modal__input" min="1" step="1000" placeholder="100000" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="invTxNotes">Catatan (opsional)</label>
+          <input type="text" id="invTxNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat">
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
@@ -160,6 +146,7 @@
 
   <div class="toast-container" aria-live="polite"></div>
 
+  <script type="module" src="../scripts/screens/inventoryController.js"></script>
   <script>
     const root = document.documentElement;
     const themeBtn = document.getElementById('themeToggle');

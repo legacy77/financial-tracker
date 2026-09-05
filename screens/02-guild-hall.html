@@ -149,124 +149,38 @@
         </div>
       </div>
 
-      <!-- Recent Transactions -->
+      <!-- Quick Actions -->
+      <div class="card p-4 mb-6">
+        <h3 class="mb-3">Aksi Cepat</h3>
+        <div class="flex gap-3" style="flex-wrap: wrap;">
+          <button class="btn btn--primary flex-1" data-open-modal="txModal" data-type="Income">➕ Tambah Loot</button>
+          <button class="btn btn--danger flex-1" data-open-modal="txModal" data-type="Expense">💸 Catat Pengeluaran</button>
+        </div>
+        <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
+          <button class="btn btn--secondary flex-1" data-open-modal="pouchModal">🏛️ Tambah Pouch</button>
+          <button class="btn btn--ghost flex-1" data-open-modal="billModal">📜 Tambah Tagihan</button>
+        </div>
+      </div>
+
+      <!-- Transaction List (dynamic) -->
       <div class="card mb-6">
         <div class="flex items-center justify-between p-4" style="border-bottom: 1px solid var(--color-border-light);">
           <h3>Transaksi Terbaru</h3>
           <a href="#" class="text-sm">Lihat semua →</a>
         </div>
-        <div class="list p-4">
-          <div class="list__item card--interactive p-2 rounded-lg">
-            <div class="list__icon">💰</div>
-            <div class="list__content">
-              <div class="list__title">Salary Quest Complete</div>
-              <div class="list__subtitle">Gaji bulanan</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--success font-bold">+5.000.000</span>
-              <span class="list__date">Hari ini</span>
-            </div>
-          </div>
-          <div class="list__item card--interactive p-2 rounded-lg">
-            <div class="list__icon">🍔</div>
-            <div class="list__content">
-              <div class="list__title">Tavern Feast</div>
-              <div class="list__subtitle">Makan & minum</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">-450.000</span>
-              <span class="list__date">Kemarin</span>
-            </div>
-          </div>
-          <div class="list__item card--interactive p-2 rounded-lg">
-            <div class="list__icon">⛽</div>
-            <div class="list__content">
-              <div class="list__title">Mount Feed</div>
-              <div class="list__subtitle">Transportasi</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">-120.000</span>
-              <span class="list__date">2 hari lalu</span>
-            </div>
-          </div>
-          <div class="list__item card--interactive p-2 rounded-lg">
-            <div class="list__icon">🔮</div>
-            <div class="list__content">
-              <div class="list__title">Magic Investment</div>
-              <div class="list__subtitle">Dividen saham</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--success font-bold">+150.000</span>
-              <span class="list__date">3 hari lalu</span>
-            </div>
-          </div>
-          <div class="list__item card--interactive p-2 rounded-lg">
-            <div class="list__icon">🏠</div>
-            <div class="list__content">
-              <div class="list__title">Guild Rent</div>
-              <div class="list__subtitle">Perumahan</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">-2.500.000</span>
-              <span class="list__date">5 hari lalu</span>
-            </div>
-          </div>
+        <div class="list p-4 transactions-list">
+          <p class="text-tertiary text-sm p-4">Memuat transaksi...</p>
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="card p-4 mb-6">
-        <h3 class="mb-3">Aksi Cepat</h3>
-        <div class="flex gap-3" style="flex-wrap: wrap;">
-          <button class="btn btn--primary flex-1" onclick="showToast('Form Tambah Loot dibuka', 'success')">➕ Tambah Loot</button>
-          <button class="btn btn--danger flex-1" onclick="showToast('Form Pengeluaran dibuka', 'danger')">💸 Catat Pengeluaran</button>
-        </div>
-        <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
-          <button class="btn btn--secondary flex-1" onclick="showToast('Fitur Transfer Gold dibuka', 'info')">🔄 Transfer Gold</button>
-          <a href="04-scroll-reading.html" class="btn btn--ghost flex-1" style="justify-content: center; text-decoration: none;">📜 Baca Scroll</a>
-        </div>
-      </div>
-
-      <!-- Upcoming Tributes (Bills) -->
+      <!-- Bills List (dynamic) -->
       <div class="card">
         <div class="flex items-center justify-between p-4" style="border-bottom: 1px solid var(--color-border-light);">
           <h3>Tagihan Mendatang</h3>
-          <span class="badge badge--warning">3 tagihan</span>
+          <span class="badge badge--warning bills-count">-</span>
         </div>
-        <div class="list p-4">
-          <div class="list__item">
-            <div class="list__icon">🏠</div>
-            <div class="list__content">
-              <div class="list__title">Guild Rent</div>
-              <div class="list__subtitle">Jatuh tempo 3 hari</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">2.500.000</span>
-              <span class="list__date">1 Des</span>
-            </div>
-          </div>
-          <div class="list__item">
-            <div class="list__icon">💡</div>
-            <div class="list__content">
-              <div class="list__title">Mana Crystal Bill</div>
-              <div class="list__subtitle">Jatuh tempo 7 hari</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">350.000</span>
-              <span class="list__date">5 Des</span>
-            </div>
-          </div>
-          <div class="list__item">
-            <div class="list__icon">📱</div>
-            <div class="list__content">
-              <div class="list__title">Communication Stone</div>
-              <div class="list__subtitle">Jatuh tempo 10 hari</div>
-            </div>
-            <div class="list__meta flex-col items-end">
-              <span class="list__amount list__amount--danger font-bold">180.000</span>
-              <span class="list__date">8 Des</span>
-            </div>
-          </div>
+        <div class="list p-4 bills-list">
+          <p class="text-tertiary text-sm p-4">Memuat tagihan...</p>
         </div>
       </div>
     </div>
@@ -296,8 +210,108 @@
     </a>
   </nav>
 
+<!-- Modals -->
+  <div class="modal" id="txModal" role="dialog" aria-modal="true" aria-labelledby="txModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="txModalTitle">➕ Tambah Loot (Pemasukan)</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="txModalForm" class="modal__body">
+        <input type="hidden" id="txTypeInput" name="txType" value="Income">
+        <div class="modal__form-group">
+          <label class="modal__label" for="txPouchId">Pouch</label>
+          <select id="txPouchId" name="pouchId" class="modal__select" required></select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txCategory">Kategori</label>
+          <input type="text" id="txCategory" name="category" class="modal__input" placeholder="Contoh: Gaji, Investasi, Makanan" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txAmount">Nominal (IDR)</label>
+          <input type="number" id="txAmount" name="amount" class="modal__input" min="1" step="1000" placeholder="100000" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txNotes">Catatan (opsional)</label>
+          <input type="text" id="txNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat">
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txDate">Tanggal</label>
+          <input type="date" id="txDate" name="date" class="modal__input">
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="pouchModal" role="dialog" aria-modal="true" aria-labelledby="pouchModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="pouchModalTitle">🏛️ Tambah Pouch Baru</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="pouchModalForm" class="modal__body">
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchName">Nama Pouch</label>
+          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchType">Tipe</label>
+          <select id="pouchType" name="pouchType" class="modal__select" required>
+            <option value="Cash">💰 Cash</option>
+            <option value="Bank">🏦 Bank</option>
+            <option value="Investment">🔮 Investasi</option>
+            <option value="E-Wallet">📱 E-Wallet</option>
+          </select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="pouchBalance">Saldo Awal (IDR)</label>
+          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1000" placeholder="0">
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Buat Pouch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="billModal" role="dialog" aria-modal="true" aria-labelledby="billModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="billModalTitle">📜 Tambah Tagihan</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="billModalForm" class="modal__body">
+        <div class="modal__form-group">
+          <label class="modal__label" for="billTitle">Judul Tagihan</label>
+          <input type="text" id="billTitle" name="billTitle" class="modal__input" placeholder="Contoh: Sewa Rumah, Listrik, Internet" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="billAmount">Nominal (IDR)</label>
+          <input type="number" id="billAmount" name="billAmount" class="modal__input" min="1" step="1000" placeholder="2500000" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="billDueDate">Tanggal Jatuh Tempo</label>
+          <input type="date" id="billDueDate" name="billDueDate" class="modal__input" required>
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Simpan Tagihan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast-container" aria-live="polite"></div>
 
+  <script type="module" src="../scripts/screens/guildHallController.js"></script>
   <script>
     const root = document.documentElement;
     const themeBtn = document.getElementById('themeToggle');
