@@ -6,6 +6,8 @@ Thumbs.db
 
 # opencode config (local per developer)
 .opencode/
+opencode.json
+opencode.jsonc
 
 # IDE
 *.swp
