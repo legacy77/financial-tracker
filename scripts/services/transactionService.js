@@ -5,6 +5,7 @@
 
 import { add, getAll, getById, put, remove } from '../db.js';
 import { updatePouchBalance } from './pouchService.js';
+import { publish } from '../core/eventBus.js';
 
 const STORE = 'transactions';
 
@@ -27,16 +28,22 @@ export async function addTransaction(txData) {
     date: txData.date || new Date().toISOString(),
     notes: txData.notes || ''
   };
-  // Sync pouch balance: Income adds, Expense deducts
+// Sync pouch balance: Income adds, Expense deducts
   const amountChange = tx.type === 'Income' ? tx.amount : -tx.amount;
   await updatePouchBalance(tx.pouchId, amountChange);
-  return await add(STORE, tx);
+  const saved = await add(STORE, tx);
+  publish('kelola-racun:updated', { type: 'transaction' });
+  return saved;
 }
 
 export async function updateTransaction(id, changes) {
-  return await put(STORE, { ...changes, id });
+  const saved = await put(STORE, { ...changes, id });
+  publish('kelola-racun:updated', { type: 'transaction' });
+  return saved;
 }
 
 export async function deleteTransaction(id) {
-  return await remove(STORE, id);
+  const result = await remove(STORE, id);
+  publish('kelola-racun:updated', { type: 'transaction' });
+  return result;
 }

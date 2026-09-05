@@ -23,11 +23,21 @@ export async function initApp() {
 
 // ---- Toast Feedback ----
 export function showToast(message, type = 'success') {
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
+  toast.className = `toast toast--${type === 'error' ? 'danger' : type}`;
   toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast--show'));
+  setTimeout(() => {
+    toast.classList.remove('toast--show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // ---- Expose Service API ----

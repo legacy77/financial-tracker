@@ -4,6 +4,7 @@
 // ============================================================
 
 import { add, getAll, getById, put, remove } from '../db.js';
+import { publish } from '../core/eventBus.js';
 
 const STORE = 'pouches';
 
@@ -23,12 +24,16 @@ export async function createPouch(data) {
     type: data.type || 'Cash',
     balance: Number(data.balance) || 0
   };
-  return await add(STORE, pouch);
+  const saved = await add(STORE, pouch);
+  publish('kelola-racun:updated', { type: 'pouch' });
+  return saved;
 }
 
 export async function updatePouchBalance(pouchId, amountChange) {
   const pouch = await getPouch(pouchId);
   if (!pouch) throw new Error('Pouch not found');
   pouch.balance += Number(amountChange);
-  return await put(STORE, pouch);
+  const saved = await put(STORE, pouch);
+  publish('kelola-racun:updated', { type: 'pouch' });
+  return saved;
 }

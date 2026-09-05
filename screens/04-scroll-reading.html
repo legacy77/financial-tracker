@@ -122,8 +122,9 @@
     </a>
   </nav>
 
-  <div class="toast-container" aria-live="polite"></div>
+<div class="toast-container" aria-live="polite"></div>
 
+  <script type="module" src="../scripts/screens/scrollReadingController.js"></script>
   <script>
     const root = document.documentElement;
     const themeBtn = document.getElementById('themeToggle');
@@ -137,51 +138,6 @@
       themeBtn.textContent = isDark ? '☀️' : '🌙';
     });
     if (root.classList.contains('dark')) themeBtn.textContent = '☀️';
-
-    function showToast(msg, type) {
-      type = type || 'success';
-      const c = document.querySelector('.toast-container');
-      const t = document.createElement('div');
-      t.className = 'toast toast--' + type;
-      t.textContent = msg;
-      c.appendChild(t);
-      setTimeout(() => t.classList.add('toast--show'), 10);
-      setTimeout(() => { t.classList.remove('toast--show'); setTimeout(() => t.remove(), 300); }, 3000);
-    }
-
-    function handleFileSelect(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      showToast('File dipilih: ' + file.name, 'info');
-      document.getElementById('fileName').textContent = file.name;
-      document.getElementById('previewSection').style.display = 'block';
-      // Demo: populate with sample rows
-      const tbody = document.getElementById('previewBody');
-      tbody.innerHTML = '';
-      const sample = [
-        ['2024-10-12', 'Salary Transfer', '5000000', 'income', 'Gaji'],
-        ['2024-10-11', 'Grocery Store', '450000', 'expense', 'Makanan'],
-        ['2024-10-10', 'Fuel Station', '120000', 'expense', 'Transport'],
-        ['2024-10-09', 'Dividend', '150000', 'income', 'Investasi']
-      ];
-      sample.forEach(row => {
-        const tr = document.createElement('tr');
-        const type = row[3];
-        tr.innerHTML = '<td>' + row[0] + '</td><td>' + row[1] + '</td><td class="table-cell--right table-cell--gold">' + (type==='income'?'+':'-') + parseInt(row[2]).toLocaleString('id-ID') + '</td><td><span class="badge badge--' + (type==='income'?'success':'danger') + '">' + (type==='income'?'Pemasukan':'Pengeluaran') + '</span></td><td><span class="badge badge--gold">' + row[4] + '</span></td>';
-        tbody.appendChild(tr);
-      });
-    }
-
-    function resetImport() {
-      document.getElementById('fileInput').value = '';
-      document.getElementById('previewSection').style.display = 'none';
-      showToast('Import dibatalkan', 'info');
-    }
-
-    function confirmImport() {
-      showToast('4 transaksi berhasil diimport!', 'success');
-      setTimeout(resetImport, 1000);
-    }
   </script>
 </body>
 </html>
