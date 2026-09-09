@@ -205,6 +205,7 @@
           <button class="btn btn--ghost flex-1" data-open-modal="catModal">🏷️ Kelola Kategori</button>
         </div>
         <div class="flex gap-3 mt-3" style="flex-wrap: wrap;">
+          <button class="btn btn--ghost flex-1 member-manage-btn" data-open-modal="memberModal">👥 Kelola Anggota</button>
           <button id="btnExportPdf" class="btn btn--ghost flex-1" style="justify-content: center;">📄 Export Laporan (PDF)</button>
           <button id="btnBackup" class="btn btn--ghost flex-1" style="justify-content: center;">💾 Backup / Restore</button>
         </div>
@@ -425,6 +426,38 @@
       <div class="modal__body">
         <p class="text-tertiary text-sm mb-4">Capai milestone untuk membuka achievement baru!</p>
         <div id="achGrid" class="ach-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Management Modal -->
+  <div class="modal" id="memberModal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content" style="max-width: 520px;">
+      <div class="modal__header">
+        <h3 class="modal__title" id="memberModalTitle">👥 Kelola Anggota</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="memberForm" class="mb-4" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end;">
+          <div class="modal__form-group">
+            <label class="modal__label" for="memName">Nama</label>
+            <input type="text" id="memName" name="memName" class="modal__input" placeholder="Nama anggota" required maxlength="30">
+          </div>
+          <div class="modal__form-group">
+            <label class="modal__label" for="memRole">Role</label>
+            <select id="memRole" name="memRole" class="modal__select">
+              <option value="Co-Manager">Co-Manager</option>
+              <option value="Viewer">Viewer</option>
+            </select>
+          </div>
+          <div class="modal__form-group">
+            <label class="modal__label" for="memPin">PIN 6 Digit</label>
+            <input type="password" id="memPin" name="memPin" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
+          </div>
+          <button type="submit" class="btn btn--primary">+</button>
+        </form>
+        <div id="memberListManaged" style="max-height: 260px; overflow-y: auto;"></div>
       </div>
     </div>
   </div>

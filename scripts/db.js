@@ -4,7 +4,7 @@
 // ============================================================
 
 const DB_NAME = 'kelola_racun_db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbInstance = null;
 

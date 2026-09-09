@@ -3,7 +3,7 @@
 // KelolaRacun Phase 3
 // ============================================================
 
-const CACHE_NAME = 'kelolaracun-v3';
+const CACHE_NAME = 'kelolaracun-v4';
 const ASSETS = [
   './index.html',
   './styles/modern-theme.css',
@@ -18,6 +18,7 @@ const ASSETS = [
   './scripts/core/autoTag.js',
   './scripts/core/backupService.js',
   './scripts/core/healthScore.js',
+  './scripts/core/authService.js',
   './scripts/services/guildService.js',
   './scripts/services/pouchService.js',
   './scripts/services/transactionService.js',

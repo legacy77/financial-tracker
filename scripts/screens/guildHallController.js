@@ -20,6 +20,7 @@ import {
 } from '../core/gamification.js';
 import { exportBackup, downloadBackup, restoreBackup, resetAllData } from '../core/backupService.js';
 import { computeHealthScore } from '../core/healthScore.js';
+import { requireAuth, getCurrentMember, getCurrentRole, canEdit, canManageGuild, canManageCategories, canManageMembers, canBackup, logout } from '../core/authService.js';
 
 let chartInstances = {};
 
@@ -476,6 +477,54 @@ function setupCategoryModal() {
   }
 }
 
+// ---- Role-based UI gating ----
+function applyRoleGating() {
+  const editable = canEdit();
+  const manageGuild = canManageGuild();
+  const manageCats = canManageCategories();
+  const backup = canBackup();
+
+  // Viewer: sembunyikan semua tombol aksi tulis
+  if (!editable) {
+    document.querySelectorAll('[data-open-modal="txModal"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('[data-open-modal="pouchModal"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('[data-open-modal="billModal"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.pill-bill-paid').forEach(el => el.style.display = 'none');
+  }
+  // Co-Manager: tidak boleh atur target, kelola kategori, backup/restore
+  if (!manageGuild) {
+    const b = document.getElementById('btnEditQuest');
+    if (b) b.style.display = 'none';
+  }
+  if (!manageCats) {
+    document.querySelectorAll('[data-open-modal="catModal"]').forEach(el => el.style.display = 'none');
+  }
+  if (!backup) {
+    const bb = document.getElementById('btnBackup');
+    if (bb) bb.style.display = 'none';
+  }
+}
+
+// ---- Logout ----
+function wireLogout() {
+  // Tambahkan tombol logout ke banner header bila belum ada
+  const headerRight = document.querySelector('.guild-banner .container .flex.items-center.gap-3:last-child, header.guild-banner .container');
+  const existing = document.getElementById('btnLogout');
+  if (existing) return;
+  const btn = document.createElement('button');
+  btn.id = 'btnLogout';
+  btn.className = 'btn btn--ghost';
+  btn.style.cssText = 'width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-full);';
+  btn.title = 'Keluar';
+  btn.setAttribute('aria-label', 'Keluar');
+  btn.textContent = '🚪';
+  btn.addEventListener('click', () => logout());
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn && themeBtn.parentElement) {
+    themeBtn.parentElement.appendChild(btn);
+  }
+}
+
 // ---- Modal Forms ----
 function populatePouchSelect(selectEl, pouches, selectedId) {
   if (!selectEl) return;
@@ -574,6 +623,9 @@ function setupBillModalForm(showToastFn) {
 (async function init() {
   setupModalClose();
 
+  // Auth guard — redirect to login if not authenticated
+  requireAuth();
+
   // Init DB & seed
   try {
     await initApp();
@@ -632,6 +684,10 @@ function setupBillModalForm(showToastFn) {
       `<option value="${escapeHtml(c.name)}">${escapeHtml(c.icon || '🏷️')} ${escapeHtml(c.name)}</option>`
     ).join('');
   }
+
+  // Role-based UI gating
+  applyRoleGating();
+  wireLogout();
 
   // Achievements modal
   const achBtn = document.getElementById('openAchievements');
