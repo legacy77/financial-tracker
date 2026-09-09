@@ -21,6 +21,8 @@ import {
 import { exportBackup, downloadBackup, restoreBackup, resetAllData } from '../core/backupService.js';
 import { computeHealthScore } from '../core/healthScore.js';
 import { requireAuth, getCurrentMember, getCurrentRole, canEdit, canManageGuild, canManageCategories, canManageMembers, canBackup, logout } from '../core/authService.js';
+import { getMembersByGuild, createMember, updateMember, deleteMember } from '../services/memberService.js';
+import { hashPin, generateSalt } from '../core/crypto.js';
 
 let chartInstances = {};
 
@@ -477,12 +479,78 @@ function setupCategoryModal() {
   }
 }
 
+// ---- Member Management ----
+async function renderMemberList() {
+  const list = document.getElementById('memberListManaged');
+  if (!list) return;
+  const guildId = getCurrentMember()?.guildId;
+  const members = await getMembersByGuild(guildId);
+  const current = getCurrentMember();
+
+  list.innerHTML = members.map(m => {
+    const isSelf = m.id === current.memberId;
+    return `
+      <div class="list__item p-2" style="border-bottom: 1px solid var(--color-border-light);">
+        <div class="list__icon">${m.role === 'Admin' ? '👑' : m.role === 'Co-Manager' ? '🧙' : '👀'}</div>
+        <div class="list__content">
+          <div class="list__title font-semibold">${escapeHtml(m.name)}${isSelf ? ' (Anda)' : ''}</div>
+          <div class="list__subtitle">${m.role} • Aktif</div>
+        </div>
+        <div class="list__meta flex-col items-end gap-1">
+          <button class="btn btn--ghost mem-delete" data-id="${m.id}" data-name="${escapeHtml(m.name)}" ${isSelf ? 'disabled' : ''} style="color: var(--color-expense-500); font-size: 12px;">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.mem-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.name;
+      if (!confirm(`Hapus anggota "${name}"? Data transaksinya tetap tersimpan.`)) return;
+      try {
+        await deleteMember(btn.dataset.id);
+        showToast('Anggota dihapus', 'info');
+        renderMemberList();
+      } catch (err) {
+        showToast('Gagal hapus: ' + err.message, 'danger');
+      }
+    });
+  });
+}
+
+function setupMemberModal() {
+  const form = document.getElementById('memberForm');
+  if (form && !form.dataset.bound) {
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = form.memName.value.trim();
+      const role = form.memRole.value;
+      const pin = form.memPin.value;
+      if (!name) { showToast('Nama wajib diisi', 'danger'); return; }
+      if (!/^\d{6}$/.test(pin)) { showToast('PIN harus 6 digit angka', 'danger'); return; }
+      const guildId = getCurrentMember()?.guildId;
+      if (!guildId) { showToast('Guild tidak ditemukan', 'danger'); return; }
+      try {
+        const salt = generateSalt();
+        const pinHash = await hashPin(pin, salt);
+        await createMember({ name, role, pinSalt: salt, pinHash, guildId });
+        showToast('Anggota ditambahkan! 👥', 'success');
+        form.reset();
+        renderMemberList();
+      } catch (err) {
+        showToast('Gagal tambah anggota: ' + err.message, 'danger');
+      }
+    });
+  }
+}
+
 // ---- Role-based UI gating ----
 function applyRoleGating() {
   const editable = canEdit();
   const manageGuild = canManageGuild();
   const manageCats = canManageCategories();
   const backup = canBackup();
+  const manageMembers = canManageMembers();
 
   // Viewer: sembunyikan semua tombol aksi tulis
   if (!editable) {
@@ -502,6 +570,9 @@ function applyRoleGating() {
   if (!backup) {
     const bb = document.getElementById('btnBackup');
     if (bb) bb.style.display = 'none';
+  }
+  if (!manageMembers) {
+    document.querySelectorAll('.member-manage-btn').forEach(el => el.style.display = 'none');
   }
 }
 
@@ -663,6 +734,7 @@ function setupBillModalForm(showToastFn) {
         if (titleEl) titleEl.textContent = type === 'Income' ? '➕ Tambah Loot (Pemasukan)' : '💸 Catat Pengeluaran';
       }
       if (modalId === 'catModal') renderCategoryList();
+      if (modalId === 'memberModal') renderMemberList();
       openModal(modalId);
     });
   });
@@ -675,6 +747,7 @@ function setupBillModalForm(showToastFn) {
   setupBackup();
   setupQuestModalForm();
   setupCategoryModal();
+  setupMemberModal();
 
   // Category selection in transaction form (list from categories store)
   const catSelect = document.getElementById('txCategory');
