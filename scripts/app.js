@@ -4,7 +4,7 @@
 // ============================================================
 
 import { openDB } from './db.js';
-import { initSeedData, getGuild, updateGuild } from './services/guildService.js';
+import { getGuild, updateGuild } from './services/guildService.js';
 import { getPouches, createPouch, getPouch } from './services/pouchService.js';
 import { getTransactions, addTransaction, getTransactionsByPouch } from './services/transactionService.js';
 import { getBills, getPendingBills, addBill, togglePaid } from './services/billService.js';
@@ -14,7 +14,6 @@ import { initCategorySeed, getCategories, createCategory, deleteCategory } from 
 export async function initApp() {
   try {
     await openDB();
-    await initSeedData();
     await initCategorySeed();
     console.log('🏰 KelolaRacun DB initialized & seeded');
   } catch (err) {

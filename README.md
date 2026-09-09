@@ -110,6 +110,24 @@ Jika deploy di host yang butuh fallback ke `index.html` (untuk deep-linking di m
 
 ---
 
+## 📚 Dokumentasi Lengkap
+
+Seluruh dokumentasi project tersedia di folder [`docs/`](/docs):
+
+| File | Isi |
+|------|-----|
+| [`docs/01-PRD.md`](docs/01-PRD.md) | Product Requirements Document (fitur, persona, data model) |
+| [`docs/02-URS.md`](docs/02-URS.md) | User Requirements Specification (user stories + AC) |
+| [`docs/03-SFD.md`](docs/03-SFD.md) | Software Functional Description (perilaku per modul) |
+| [`docs/04-TSD.md`](docs/04-TSD.md) | Technical Specification & Architecture (schema, event bus, modul) |
+| [`docs/05-UI-DESIGN.md`](docs/05-UI-DESIGN.md) | Design System & UX Flow |
+| [`docs/06-TEST-PLAN.md`](docs/06-TEST-PLAN.md) | Test Plan & QA Checklist |
+| [`docs/07-GETTING-STARTED.md`](docs/07-GETTING-STARTED.md) | Step-by-step menjalankan aplikasi |
+| [`docs/08-DEPLOYMENT.md`](docs/08-DEPLOYMENT.md) | Panduan deploy & PWA |
+| [`docs/09-CHANGELOG.md`](docs/09-CHANGELOG.md) | Riwayat rilis |
+
+---
+
 ## 💬 Kenapa Dibuat?
 
 Biar ngatur keuangan keluarga nggak kerasa kaya "kerjaan rumah" yang bikin males — tapi kayak **main game.** Ngumpulin gold, nge-stack quest, naikin guild level. Finance jadi fun. 🎮

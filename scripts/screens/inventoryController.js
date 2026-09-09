@@ -9,9 +9,9 @@ import { getPouches, createPouch, getPouch } from '../services/pouchService.js';
 import { getTransactionsByPouch, addTransaction } from '../services/transactionService.js';
 import { subscribe, publish } from '../core/eventBus.js';
 import {
-  formatRupiah, relativeDate, validateTransactionForm,
-  openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
+  formatRupiah, openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
 } from '../core/helpers.js';
+import { requireAuth } from '../core/authService.js';
 
 let activePouchId = null;
 
@@ -199,6 +199,9 @@ function setupForms(pouches) {
 // ---- Main Entry ----
 (async function init() {
   setupModalClose();
+
+  // Auth guard
+  requireAuth();
 
   const data = await fetchInventoryData();
   renderBanner(data);

@@ -9,6 +9,7 @@ import { getPouches } from '../services/pouchService.js';
 import { addTransaction } from '../services/transactionService.js';
 import { formatRupiah, setupModalClose, escapeHtml } from '../core/helpers.js';
 import { autoTag } from '../core/autoTag.js';
+import { requireAuth } from '../core/authService.js';
 
 let importedRows = [];
 
@@ -142,6 +143,7 @@ window.confirmImport = async function() {
 // ---- Main Entry ----
 (async function init() {
   setupModalClose();
+  requireAuth();
   await initBanner();
   try {
     await initApp();
