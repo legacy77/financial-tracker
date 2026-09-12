@@ -1,4 +1,4 @@
-﻿# 💜 KelolaRacun — Family Finance Hub
+﻿# 💜 KelolaRacun: Family Finance Hub
 
 > _"Kelola racun-mu, raih goal-mu! Karena ngatur duit keluarga tuh seru, bukan beban."_ 😎
 
