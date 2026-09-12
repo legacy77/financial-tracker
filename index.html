@@ -3,38 +3,214 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KelolaRacun</title>
+  <title>Home — KelolaRacun</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <meta name="theme-color" content="#14b8a6">
+  <link rel="stylesheet" href="styles/modern-theme.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/print.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <script type="module">
-    import { openDB } from './scripts/db.js';
-    import { getMembers } from './scripts/services/memberService.js';
-    import { isAuthenticated } from './scripts/core/authService.js';
+  <header class="guild-banner" role="banner">
+    <div class="container guild-banner__inner">
+      <div class="flex items-center gap-3 banner-brand">
+        <div class="avatar">🏠</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="guild-banner__title text-lg">KelolaRacun</h1>
+            <span class="badge badge--gold lv-badge guild-level">Lv. 1</span>
+          </div>
+          <p class="text-tertiary text-xs banner-sub" id="homeGuildSub">Home Base harian</p>
+        </div>
+      </div>
+      <nav class="desktop-nav" aria-label="Navigasi desktop">
+        <a href="index.html" aria-current="page">Home</a>
+        <a href="screens/02-guild-hall.html">Hall</a>
+        <a href="screens/03-inventory.html">Inventory</a>
+        <a href="screens/04-scroll-reading.html">Import</a>
+      </nav>
+      <div class="flex items-center gap-2 banner-actions">
+        <div class="card p-2 flex items-center gap-2 pill">
+          <span>💰</span>
+          <span class="guild-banner__gold font-bold text-sm">Memuat...</span>
+        </div>
+        <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema">🌙</button>
+        <button class="btn btn--ghost theme-toggle" data-logout aria-label="Keluar" title="Keluar">🚪</button>
+      </div>
+    </div>
+  </header>
 
-    async function redirectByAuth() {
-      try {
-        await openDB();
-      } catch {
-        window.location.replace('screens/00-register.html');
-        return;
-      }
+  <main class="screen" role="main">
+    <div class="container home-shell">
+      <div class="card p-6 mb-6 home-hero">
+        <p class="text-tertiary text-sm" id="homeDate">Hari ini</p>
+        <h2 id="homeGreeting">Selamat datang!</h2>
+        <div class="home-gold font-bold" id="homeGold">Memuat...</div>
+        <p class="text-tertiary text-sm">Total gold semua pouch</p>
+        <div class="home-chips">
+          <span class="badge badge--success" id="homeTodayInc">+Rp0</span>
+          <span class="badge badge--danger" id="homeTodayExp">-Rp0</span>
+          <span class="badge" id="homeTodayCount">0 transaksi hari ini</span>
+          <span class="badge badge--gold" id="homeXp">⚡0 XP</span>
+          <span class="badge badge--info" id="homeStreak">🔥0 hari</span>
+        </div>
+      </div>
 
-      const members = await getMembers(true);
+      <div class="quick-big mb-6">
+        <button class="btn btn--primary" data-open-modal="txModal" data-type="Income">➕ Tambah Loot</button>
+        <button class="btn btn--danger" data-open-modal="txModal" data-type="Expense">💸 Catat Pengeluaran</button>
+      </div>
 
-      if (!members.length) {
-        window.location.replace('screens/00-register.html');
-        return;
-      }
-      if (isAuthenticated()) {
-        window.location.replace('screens/02-guild-hall.html');
-        return;
-      }
-      window.location.replace('screens/01-guild-entrance.html');
-    }
+      <div class="card mb-6">
+        <div class="flex items-center justify-between p-4 card-head">
+          <h3>Aktivitas Hari Ini</h3>
+          <a href="screens/02-guild-hall.html" class="text-sm">Analisa di Hall →</a>
+        </div>
+        <div class="list p-4 today-list">
+          <p class="text-tertiary text-sm p-4">Memuat aktivitas...</p>
+        </div>
+      </div>
 
-    redirectByAuth();
-  </script>
+      <div class="card mb-6">
+        <div class="flex items-center justify-between p-4 card-head">
+          <h3>Tagihan H-3 <span class="badge badge--warning bills-count" id="homeDueCount">-</span></h3>
+          <a href="screens/02-guild-hall.html" class="text-sm">Semua tagihan →</a>
+        </div>
+        <div class="list p-4 due-list">
+          <p class="text-tertiary text-sm p-4">Memuat tagihan...</p>
+        </div>
+      </div>
+
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3>Quest Bulan Ini</h3>
+          <a href="screens/02-guild-hall.html" class="text-sm">Detail & target →</a>
+        </div>
+        <div class="mb-3">
+          <div class="flex justify-between mb-1">
+            <span class="font-semibold text-sm">Pendapatan</span>
+            <span class="text-sm" id="hqIncomeTxt">-</span>
+          </div>
+          <div class="bar-track bar-track--sm">
+            <div id="hqIncomeBar" class="bar-fill--income" style="width: 0%;"></div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="flex justify-between mb-1">
+            <span class="font-semibold text-sm">Pengeluaran</span>
+            <span class="text-sm" id="hqExpenseTxt">-</span>
+          </div>
+          <div class="bar-track bar-track--sm">
+            <div id="hqExpenseBar" class="bar-fill--expense" style="width: 0%;"></div>
+          </div>
+        </div>
+        <p class="text-tertiary text-xs mt-1">Skor guild: <span id="hqScore" class="font-bold">-</span></p>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
+    <a href="index.html" class="bottom-nav__item bottom-nav__item--active">
+      <span class="bottom-nav__icon">🏠</span>
+      <span class="bottom-nav__label">HOME</span>
+    </a>
+    <a href="screens/02-guild-hall.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🏰</span>
+      <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="screens/03-inventory.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">🎒</span>
+      <span class="bottom-nav__label">INVENTORY</span>
+    </a>
+    <a href="screens/04-scroll-reading.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📜</span>
+      <span class="bottom-nav__label">IMPORT</span>
+    </a>
+    <button type="button" class="bottom-nav__item" data-logout>
+      <span class="bottom-nav__icon">🚪</span>
+      <span class="bottom-nav__label">LOGOUT</span>
+    </button>
+  </nav>
+
+  <div class="modal" id="txModal" role="dialog" aria-modal="true" aria-labelledby="txModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="txModalTitle">➕ Tambah Loot (Pemasukan)</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="txModalForm" class="modal__body">
+        <input type="hidden" id="txTypeInput" name="txType" value="Income">
+        <div class="modal__form-group">
+          <label class="modal__label" for="txPouchId">Pouch</label>
+          <select id="txPouchId" name="pouchId" class="modal__select" required></select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txCategory">Kategori</label>
+          <select id="txCategory" name="category" class="modal__select" required></select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txAmount">Nominal (IDR)</label>
+          <input type="number" id="txAmount" name="amount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="100000" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txNotes">Catatan (opsional)</label>
+          <input type="text" id="txNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat">
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="txDate">Tanggal</label>
+          <input type="date" id="txDate" name="date" class="modal__input">
+        </div>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="payBillModal" role="dialog" aria-modal="true" aria-labelledby="payBillModalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 class="modal__title" id="payBillModalTitle">💸 Bayar Tagihan</h3>
+        <button class="modal__close" aria-label="Tutup">&times;</button>
+      </div>
+      <form id="payBillForm" class="modal__body">
+        <input type="hidden" id="payBillId">
+        <p class="text-sm mb-1"><strong id="payBillTitle">-</strong></p>
+        <p class="text-tertiary text-sm mb-4" id="payBillInfo">-</p>
+        <div class="bar-track bar-track--sm mb-4">
+          <div id="payBillBar" class="bar-fill--income" style="width: 0%;"></div>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="payBillPouch">Bayar dari Pouch</label>
+          <select id="payBillPouch" name="payBillPouch" class="modal__select" required></select>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="payBillAmount">Jumlah Bayar (IDR)</label>
+          <input type="number" id="payBillAmount" name="payBillAmount" class="modal__input" min="1" step="1" inputmode="numeric" required>
+        </div>
+        <div class="modal__form-group">
+          <label class="modal__label" for="payBillDate">Tanggal Bayar</label>
+          <input type="date" id="payBillDate" name="payBillDate" class="modal__input">
+        </div>
+        <p class="text-tertiary text-xs mb-4" id="payBillWarn"></p>
+        <div class="modal__footer">
+          <button type="button" class="btn btn--ghost modal__close">Batal</button>
+          <button type="submit" class="btn btn--primary" id="payBillSubmit">Bayar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" aria-live="polite"></div>
+
+  <script type="module" src="scripts/ui.js"></script>
+  <script type="module" src="scripts/screens/homeController.js"></script>
 </body>
 </html>

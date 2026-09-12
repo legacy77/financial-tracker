@@ -4,61 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrasi Guild — KelolaRacun</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
   <link rel="stylesheet" href="../styles/components.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
-<body style="display: flex; flex-direction: column; min-height: 100vh;">
-  <header class="guild-banner" role="banner">
-    <div class="container flex items-center justify-between" style="padding-top: var(--space-6); padding-bottom: var(--space-6);">
-      <h1 class="guild-banner__title">🏰 KelolaRacun</h1>
-    </div>
-  </header>
-
-  <main class="container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding-top: var(--space-8); padding-bottom: var(--space-8);">
-    <div class="card p-8" style="width: 100%; max-width: 440px;">
-      <div class="text-center mb-6">
-        <div class="text-4xl mb-3">🛡️</div>
-        <h2 class="mb-2">Buat Guild Baru</h2>
-        <p class="text-tertiary text-sm">Mulai mengelola keuangan keluarga bersama</p>
-      </div>
-
-      <form id="registerForm">
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2" for="guildName">Nama Keluarga (Guild)</label>
-          <input type="text" id="guildName" class="input" placeholder="Contoh: Keluarga Santoso" required maxlength="50">
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2" for="adminName">Nama Admin</label>
-          <input type="text" id="adminName" class="input" placeholder="Contoh: Budi" required maxlength="30">
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-semibold mb-2" for="pin">PIN 6 Digit</label>
-          <input type="password" id="pin" class="input" placeholder="6 digit PIN" required minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="new-password">
-        </div>
-
-        <div class="mb-6">
-          <label class="block text-sm font-semibold mb-2" for="confirmPin">Konfirmasi PIN</label>
-          <input type="password" id="confirmPin" class="input" placeholder="Ulangi PIN" required minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="new-password">
-        </div>
-
-        <button type="submit" class="btn btn--primary w-full justify-center py-3" style="font-size: var(--text-base);">🚀 Buat Guild & Mulai</button>
-      </form>
-
-      <div class="divider"></div>
-
-      <div class="text-center">
-        <p class="text-tertiary text-sm">Sudah punya akun? <a href="01-guild-entrance.html" class="font-semibold">Masuk</a></p>
-      </div>
-    </div>
-  </main>
-
-  <div class="toast-container" aria-live="polite"></div>
-
-  <script type="module" src="../scripts/screens/registerController.js"></script>
+<body>
+  <p class="text-center p-6">Mengalihkan ke halaman masuk… <a href="01-guild-entrance.html">Klik di sini jika tidak berpindah</a>.</p>
+  <script>window.location.replace('01-guild-entrance.html');</script>
 </body>
 </html>

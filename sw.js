@@ -3,7 +3,7 @@
 // KelolaRacun Phase 3
 // ============================================================
 
-const CACHE_NAME = 'kelolaracun-v4';
+const CACHE_NAME = 'kelolaracun-v19';
 const ASSETS = [
   './index.html',
   './styles/modern-theme.css',
@@ -11,19 +11,34 @@ const ASSETS = [
   './styles/print.css',
   './vendor/chart.umd.js',
   './scripts/app.js',
+  './scripts/ui.js',
   './scripts/db.js',
+  './scripts/screens/homeController.js',
+  './scripts/screens/guildHallController.js',
+  './scripts/screens/inventoryController.js',
+  './scripts/screens/scrollReadingController.js',
+  './scripts/screens/loginController.js',
+  './scripts/screens/registerController.js',
   './scripts/core/helpers.js',
   './scripts/core/eventBus.js',
   './scripts/core/gamification.js',
   './scripts/core/autoTag.js',
+  './scripts/core/seabankParser.js',
   './scripts/core/backupService.js',
   './scripts/core/healthScore.js',
   './scripts/core/authService.js',
+  './scripts/core/crypto.js',
+  './scripts/core/syncService.js',
   './scripts/services/guildService.js',
+  './scripts/services/memberService.js',
   './scripts/services/pouchService.js',
   './scripts/services/transactionService.js',
   './scripts/services/billService.js',
   './scripts/services/categoryService.js',
+  './scripts/services/importService.js',
+  './scripts/services/budgetService.js',
+  './scripts/core/payBill.js',
+  './screens/00-register.html',
   './screens/01-guild-entrance.html',
   './screens/02-guild-hall.html',
   './screens/03-inventory.html',
@@ -56,6 +71,9 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  if (e.request.url.includes('/api/')) {
+    return;
+  }
   // Network first for API/navigation, cache first for static assets
   e.respondWith(
     caches.match(e.request).then((cached) => {

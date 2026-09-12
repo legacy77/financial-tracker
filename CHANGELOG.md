@@ -1,7 +1,7 @@
 # 📌 Changelog
 ## 💜 KelolaRacun — Family Finance Hub
 
-> Riwayat rilis per fitur besar, berdasar `git log`.
+> Riwayat rilis per fitur besar, berdasar `git log`. Dokumentasi teknis lengkap tersedia di folder `docs/`.
 
 ---
 

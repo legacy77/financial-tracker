@@ -43,7 +43,7 @@ export async function computeHealthScore({ guild, transactions, pouches, bills }
   let monthIncome = 0, monthExpense = 0;
   transactions.filter(isCurrentMonth).forEach(t => {
     if (t.type === 'Income') monthIncome += t.amount;
-    if (t.type === 'Expense' || t.type === 'Transfer') monthExpense += t.amount;
+    if (t.type === 'Expense') monthExpense += t.amount;
   });
   const savingsRatio = monthIncome > 0 ? Math.max(0, ((monthIncome - monthExpense) / monthIncome) * 100) : 0;
 

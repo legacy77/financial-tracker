@@ -7,6 +7,7 @@ import { initApp, showToast } from '../app.js';
 import { getGuild, createGuild } from '../services/guildService.js';
 import { createMember } from '../services/memberService.js';
 import { hashPin, generateSalt } from '../core/crypto.js';
+import { pushToServer } from '../core/syncService.js';
 
 const form = document.getElementById('registerForm');
 
@@ -45,6 +46,14 @@ form.addEventListener('submit', async (e) => {
     // Inisialisasi DB dulu
     await initApp();
 
+    // Guard: guild sudah ada → redirect ke login
+    const existing = await getGuild();
+    if (existing) {
+      showToast('Guild sudah ada. Silakan masuk.', 'info');
+      setTimeout(() => { window.location.href = './01-guild-entrance.html'; }, 800);
+      return;
+    }
+
     // Hash PIN
     const salt = generateSalt();
     const hash = await hashPin(pin, salt);
@@ -70,16 +79,16 @@ form.addEventListener('submit', async (e) => {
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 hari
     };
     localStorage.setItem('session', JSON.stringify(session));
+    try { await pushToServer(); } catch {}
 
     showToast('Guild dibuat! Selamat datang! 🎉', 'success');
     setTimeout(() => {
-      window.location.href = '02-guild-hall.html';
+      window.location.href = '../index.html';
     }, 800);
 
   } catch (err) {
     console.error('Register error:', err);
     showToast('Gagal: ' + err.message, 'danger');
-  } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = '🚀 Buat Guild & Mulai';
   }

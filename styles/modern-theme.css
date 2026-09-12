@@ -96,10 +96,10 @@
   --color-bg-active: #e0e0e0;
 
   --color-text-primary: #1a1a1a;
-  --color-text-secondary: #5d5d5d;
-  --color-text-tertiary: #8c8c8c;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #6b7280;
   --color-text-inverse: #ffffff;
-  --color-text-link: #0d9488;
+  --color-text-link: #0f766e;
 
   --color-border-light: #e0e0e0;
   --color-border-medium: #d0d0d0;
@@ -233,9 +233,10 @@
   --nav-item-active-text: var(--color-income-600);
   --nav-item-inactive: var(--color-text-tertiary);
 
-  --banner-bg: linear-gradient(135deg, var(--color-income-50) 0%, var(--color-purple-25) 100%);
+  --banner-bg: linear-gradient(135deg, #ecfdf5 0%, #fffbeb 100%);
+  --banner-border: var(--color-gold-200);
   --banner-text: var(--color-text-primary);
-  --banner-gold: var(--color-gold-500);
+  --banner-gold: var(--color-gold-700);
 }
 
 /* ═════════════════════════════════════════════════════════════════════
@@ -361,6 +362,113 @@
     --banner-bg: linear-gradient(135deg, var(--color-income-900) 0%, var(--color-purple-900) 100%);
     --banner-gold: var(--color-gold-400);
   }
+}
+
+/* Manual .dark override — works regardless of OS setting. ponytail: duplicates media block above; upgrade path CSS @mixin when baseline allows. */
+html.dark {
+  color-scheme: dark;
+  --color-gray-25: #0a0a0a;
+  --color-gray-50: #111111;
+  --color-gray-100: #1a1a1a;
+  --color-gray-200: #2a2a2a;
+  --color-gray-300: #3d3d3d;
+  --color-gray-400: #5d5d5d;
+  --color-gray-500: #737373;
+  --color-gray-600: #8c8c8c;
+  --color-gray-700: #a8a8a8;
+  --color-gray-800: #d0d0d0;
+  --color-gray-900: #e0e0e0;
+  --color-gray-950: #f5f5f5;
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-hover: #2a2a2a;
+  --color-bg-active: #3d3d3d;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #d0d0d0;
+  --color-text-tertiary: #a1a1aa;
+  --color-text-inverse: #0a0a0a;
+  --color-text-link: #2dd4bf;
+  --color-border-light: #2a2a2a;
+  --color-border-medium: #3d3d3d;
+  --color-border-focus: #2dd4bf;
+  --color-income-25: #062a23;
+  --color-income-50: #0a3d33;
+  --color-income-100: #0d5545;
+  --color-income-200: #147a5e;
+  --color-income-300: #1d9e77;
+  --color-income-400: #2dd4bf;
+  --color-income-500: #5eead4;
+  --color-income-600: #99efd1;
+  --color-income-700: #ccf7e7;
+  --color-income-800: #e6fbf3;
+  --color-income-900: #f0fdfa;
+  --color-expense-25: #3d0a0f;
+  --color-expense-50: #581019;
+  --color-expense-100: #7a1424;
+  --color-expense-200: #a81a33;
+  --color-expense-300: #d12542;
+  --color-expense-400: #fb7185;
+  --color-expense-500: #fda4af;
+  --color-expense-600: #fecdd3;
+  --color-expense-700: #ffe4e6;
+  --color-expense-800: #fff1f2;
+  --color-expense-900: #fffafb;
+  --color-gold-25: #3d2f06;
+  --color-gold-50: #5a450a;
+  --color-gold-100: #7a5a0d;
+  --color-gold-200: #a87812;
+  --color-gold-300: #d19417;
+  --color-gold-400: #f59e0b;
+  --color-gold-500: #fbbf24;
+  --color-gold-600: #fcd34d;
+  --color-gold-700: #fde68a;
+  --color-gold-800: #fef3c7;
+  --color-gold-900: #fffbeb;
+  --color-purple-25: #2a0a3d;
+  --color-purple-50: #3d1058;
+  --color-purple-100: #58147a;
+  --color-purple-200: #7a1aa8;
+  --color-purple-300: #a825d1;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #d8b4fe;
+  --color-purple-600: #e9d5ff;
+  --color-purple-700: #f5f0ff;
+  --color-purple-800: #faf5ff;
+  --color-purple-900: #fdfbff;
+  --color-blue-25: #0a1a3d;
+  --color-blue-50: #102a58;
+  --color-blue-100: #143d7a;
+  --color-blue-200: #1a5aa8;
+  --color-blue-300: #2575d1;
+  --color-blue-400: #3b82f6;
+  --color-blue-500: #60a5fa;
+  --color-blue-600: #93c5fd;
+  --color-blue-700: #bfdbfe;
+  --color-blue-800: #dbeafe;
+  --color-blue-900: #eff6ff;
+  --card-bg: var(--color-bg-secondary);
+  --card-border: var(--color-border-light);
+  --btn-primary-bg: var(--color-income-500);
+  --btn-primary-hover: var(--color-income-400);
+  --btn-primary-active: var(--color-income-300);
+  --btn-primary-text: var(--color-text-inverse);
+  --btn-secondary-bg: var(--color-bg-tertiary);
+  --btn-secondary-hover: var(--color-bg-hover);
+  --btn-secondary-active: var(--color-bg-active);
+  --btn-secondary-text: var(--color-text-primary);
+  --btn-ghost-bg: transparent;
+  --btn-ghost-hover: var(--color-bg-tertiary);
+  --btn-ghost-active: var(--color-bg-hover);
+  --btn-ghost-text: var(--color-text-secondary);
+  --badge-bg: var(--color-bg-tertiary);
+  --badge-text: var(--color-text-secondary);
+  --nav-bg: var(--color-bg-secondary);
+  --nav-border: var(--color-border-light);
+  --nav-item-active: var(--color-income-900);
+  --nav-item-active-text: var(--color-income-300);
+  --banner-bg: linear-gradient(135deg, var(--color-income-900) 0%, var(--color-purple-900) 100%);
+  --banner-gold: var(--color-gold-400);
 }
 
 /* ═════════════════════════════════════════════════════════════════════
