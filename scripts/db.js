@@ -4,9 +4,20 @@
 // ============================================================
 
 const DB_NAME = 'kelola_racun_db';
-const DB_VERSION = 4;
+const DB_VERSION = 6;
 
 let dbInstance = null;
+let onMutation = null;
+
+export function setMutationCallback(fn) {
+  onMutation = fn;
+}
+
+function notifyMutation() {
+  if (typeof onMutation === 'function') {
+    try { onMutation(); } catch {}
+  }
+}
 
 // ---- Schema Definition ----
 const SCHEMA = {
@@ -16,7 +27,9 @@ const SCHEMA = {
   transactions:  { keyPath: 'id', indexes: ['pouchId', 'date', 'type', 'category'] },
   bills:         { keyPath: 'id', indexes: ['dueDate', 'status'] },
   gamification:  { keyPath: 'id', indexes: [] },
-  categories:    { keyPath: 'id', indexes: ['name'] }
+  categories:    { keyPath: 'id', indexes: ['name'] },
+  imports:       { keyPath: 'id', indexes: ['createdAt'] },
+  budgets:       { keyPath: 'id', indexes: ['categoryId', 'month'] }
 };
 
 /**
@@ -31,18 +44,31 @@ export function openDB() {
 
     request.onupgradeneeded = (e) => {
       const db = e.target.result;
+      const upgradeTx = e.target.transaction;
+
       Object.entries(SCHEMA).forEach(([storeName, cfg]) => {
-        if (!db.objectStoreNames.contains(storeName)) {
-          const store = db.createObjectStore(storeName, { keyPath: cfg.keyPath });
-          cfg.indexes.forEach((idx) => {
+        const store = db.objectStoreNames.contains(storeName)
+          ? upgradeTx.objectStore(storeName)
+          : db.createObjectStore(storeName, { keyPath: cfg.keyPath });
+
+        cfg.indexes.forEach((idx) => {
+          if (!store.indexNames.contains(idx)) {
             store.createIndex(idx, idx, { unique: false });
-          });
-        }
+          }
+        });
       });
+    };
+
+    request.onblocked = () => {
+      console.warn('⏳ IndexedDB upgrade blocked — tutup tab lain yang membuka KelolaRacun lalu muat ulang halaman ini.');
     };
 
     request.onsuccess = (e) => {
       dbInstance = e.target.result;
+      dbInstance.onversionchange = () => {
+        try { dbInstance.close(); } catch {}
+        console.warn('⏳ Database diperbarui di tab lain — muat ulang halaman ini.');
+      };
       resolve(dbInstance);
     };
 
@@ -68,7 +94,10 @@ export async function add(storeName, record) {
   const { store, tx } = await getStore(storeName, 'readwrite');
   return new Promise((res, rej) => {
     const req = store.add(record);
-    req.onsuccess = () => res(record);
+    req.onsuccess = () => {
+      notifyMutation();
+      res(record);
+    };
     req.onerror = (e) => rej(e.target.error);
   });
 }
@@ -104,7 +133,10 @@ export async function put(storeName, record) {
   const { store } = await getStore(storeName, 'readwrite');
   return new Promise((res, rej) => {
     const req = store.put(record);
-    req.onsuccess = () => res(record);
+    req.onsuccess = () => {
+      notifyMutation();
+      res(record);
+    };
     req.onerror = (e) => rej(e.target.error);
   });
 }
@@ -116,7 +148,10 @@ export async function remove(storeName, id) {
   const { store } = await getStore(storeName, 'readwrite');
   return new Promise((res, rej) => {
     const req = store.delete(id);
-    req.onsuccess = () => res(true);
+    req.onsuccess = () => {
+      notifyMutation();
+      res(true);
+    };
     req.onerror = (e) => rej(e.target.error);
   });
 }

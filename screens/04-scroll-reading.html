@@ -3,110 +3,204 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scroll Reading — Family Finance Hub</title>
+  <title>Import — Family Finance Hub</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
   <link rel="stylesheet" href="../styles/components.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- ponytail: CDN dulu (pdf.js 3.11, tesseract 5.1); vendor lokal saat stabil offline. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
-  <!-- Header -->
   <header class="guild-banner" role="banner">
-    <div class="container flex items-center justify-between" style="padding-top: var(--space-6); padding-bottom: var(--space-6);">
-      <h1 class="guild-banner__title">🏰 Family Finance Hub</h1>
-      <div class="flex items-center gap-4">
-        <div class="guild-banner__gold font-bold">💰 12.450.000</div>
-        <button class="btn btn--secondary" id="themeToggle" aria-label="Ganti tema">🌙</button>
+    <div class="container guild-banner__inner">
+      <div class="flex items-center gap-3 banner-brand">
+        <div class="avatar">📥</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="guild-banner__title text-lg">Family Finance Hub</h1>
+            <span class="badge badge--gold lv-badge guild-level">Lv. 1</span>
+          </div>
+          <p class="text-tertiary text-xs banner-sub">Import · Bulk Input</p>
+        </div>
+      </div>
+      <nav class="desktop-nav" aria-label="Navigasi desktop">
+        <a href="../index.html">Home</a>
+        <a href="02-guild-hall.html">Hall</a>
+        <a href="03-inventory.html">Inventory</a>
+        <a href="04-scroll-reading.html" aria-current="page">Import</a>
+      </nav>
+      <div class="flex items-center gap-2 banner-actions">
+        <div class="card p-2 flex items-center gap-2 pill">
+          <span>💰</span>
+          <span class="guild-banner__gold font-bold text-sm">Memuat...</span>
+        </div>
+        <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema">🌙</button>
+        <button class="btn btn--ghost theme-toggle" data-logout aria-label="Keluar" title="Keluar">🚪</button>
       </div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="container" style="padding-top: var(--space-8); padding-bottom: var(--space-8); max-width: 800px;">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="mb-1">Baca Scroll</h2>
-        <p class="text-tertiary">Import transaksi dari bank statement (CSV/Excel)</p>
-      </div>
-      <span class="badge badge--gold">🔮 Beta</span>
+  <main class="container page-shell import-shell">
+    <div class="mb-6">
+      <h2 class="mb-1">Import Transaksi</h2>
+      <p class="text-tertiary">Upload statement bank, cek datanya, masukkan sekaligus ke pouch.</p>
     </div>
 
-    <!-- Upload Zone -->
-    <div class="card p-8 mb-6 text-center">
-      <div class="mb-4 text-5xl">📜</div>
-      <h3 class="mb-2">Seret Scroll ke Sini</h3>
-      <p class="text-tertiary mb-6">Atau klik untuk memilih file CSV/Excel dari bank kamu</p>
-      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="sr-only" onchange="handleFileSelect(event)">
-      <button class="btn btn--primary" onclick="document.getElementById('fileInput').click()">📂 Pilih File</button>
-      <p class="text-tertiary text-xs mt-4">Format didukung: CSV, XLSX, XLS • Maks 10MB</p>
-    </div>
+    <ol class="stepper" id="stepper" aria-label="Langkah import">
+      <li class="stepper__item stepper__item--active" data-step="1" aria-current="step">
+        <span class="stepper__dot">1</span>
+        <span class="stepper__label">Upload</span>
+      </li>
+      <li class="stepper__item" data-step="2">
+        <span class="stepper__dot">2</span>
+        <span class="stepper__label">Reconcile</span>
+      </li>
+      <li class="stepper__item" data-step="3">
+        <span class="stepper__dot">3</span>
+        <span class="stepper__label">Selesai</span>
+      </li>
+    </ol>
 
-    <!-- Preview Area (hidden until file selected) -->
-    <div id="previewSection" class="card p-6 mb-6" style="display: none;">
-      <div class="flex items-center justify-between mb-4">
-        <h3>Pratinjau Data</h3>
-        <span id="fileName" class="badge badge--info"></span>
-      </div>
-      <div style="overflow-x: auto;">
-        <table class="table" id="previewTable">
-          <thead>
-            <tr>
-              <th>Tanggal</th>
-              <th>Deskripsi</th>
-              <th>Jumlah</th>
-              <th>Tipe</th>
-              <th>Kategori</th>
-            </tr>
-          </thead>
-          <tbody id="previewBody"></tbody>
-        </table>
-      </div>
-      <div class="flex justify-end gap-3 mt-4">
-        <button class="btn btn--secondary" onclick="resetImport()">❌ Batal</button>
-        <button class="btn btn--primary" onclick="confirmImport()">✅ Import ke Inventory</button>
-      </div>
-    </div>
-
-    <!-- Import History -->
-    <div class="card p-6">
-      <h3 class="mb-4">Riwayat Import</h3>
-      <div class="list">
-        <div class="list__item">
-          <div class="list__icon">📄</div>
-          <div class="list__content">
-            <div class="list__title">BCA Statement Oktober 2024</div>
-            <div class="list__subtitle">45 transaksi • 12 Okt 2024</div>
-          </div>
-          <div class="list__meta flex-col items-end">
-            <span class="badge badge--success">Selesai</span>
-            <span class="text-xs text-tertiary">+2.1M / -1.8M</span>
+    <section id="step1" class="step-pane" aria-label="Langkah 1: Upload">
+      <div class="card p-6 mb-6">
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Unggah file statement">
+          <div class="dropzone__icon">📄</div>
+          <h3 class="mb-1">Tarik file ke sini atau ketuk untuk pilih</h3>
+          <p class="text-tertiary text-sm mb-4">Statement SeaBank (PDF), CSV, atau Excel — maks 10MB</p>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf" class="sr-only">
+          <span class="btn btn--primary">📂 Pilih File</span>
+          <div class="flex gap-2 justify-center mt-4 flex-wrap">
+            <span class="badge badge--info">PDF SeaBank</span>
+            <span class="badge">CSV</span>
+            <span class="badge">XLSX</span>
           </div>
         </div>
-        <div class="list__item">
-          <div class="list__icon">📄</div>
-          <div class="list__content">
-            <div class="list__title">Mandiri E-Statement September</div>
-            <div class="list__subtitle">38 transaksi • 5 Sep 2024</div>
+        <div id="ocrWrap" class="is-hidden mt-4" aria-live="polite">
+          <div class="flex justify-between mb-1">
+            <span class="text-sm font-semibold" id="ocrFileName">-</span>
+            <span class="text-sm text-tertiary" id="ocrStatus">Menyiapkan...</span>
           </div>
-          <div class="list__meta flex-col items-end">
-            <span class="badge badge--success">Selesai</span>
-            <span class="text-xs text-tertiary">+1.5M / -2.3M</span>
-          </div>
+          <div class="bar-track bar-track--sm"><div id="ocrBar" class="bar-fill--income" style="width: 0%;"></div></div>
+          <div id="ocrStatusLegacy" class="sr-only"></div>
         </div>
       </div>
-    </div>
+
+      <div class="card p-6 mb-6">
+        <h3 class="mb-1">Tujuan import</h3>
+        <p class="text-tertiary text-sm mb-4">Semua transaksi terpilih masuk ke pouch ini.</p>
+        <label class="modal__label" for="importPouchId">Masuk ke Pouch</label>
+        <select id="importPouchId" class="modal__select"></select>
+      </div>
+
+      <details class="card p-6 mb-6">
+        <summary class="font-semibold text-sm">Cara export statement SeaBank</summary>
+        <ol class="text-sm text-secondary mt-3 import-help">
+          <li>Buka aplikasi SeaBank → mutasi rekening.</li>
+          <li>Export / simpan sebagai PDF atau CSV.</li>
+          <li>Upload file di sini, lalu cek hasilnya di langkah Reconcile.</li>
+        </ol>
+        <p class="text-tertiary text-xs mt-2">Kolom yang dibaca: tanggal, keterangan, keluar, masuk. Kolom saldo akhir diabaikan.</p>
+      </details>
+
+      <div class="card p-6">
+        <h3 class="mb-4">Riwayat Import</h3>
+        <div class="list" id="importHistoryList">
+          <p class="text-tertiary text-sm p-4">Memuat riwayat...</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="step2" class="step-pane is-hidden" aria-label="Langkah 2: Reconcile">
+      <div class="card p-6 mb-4">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h3>⚖️ Reconcile</h3>
+            <p class="text-tertiary text-sm"><span id="fileName" class="font-semibold">-</span> · <span id="rowCount">0 baris</span></p>
+          </div>
+          <button class="btn btn--ghost btn--sm" id="btnBackToUpload">← Ganti file</button>
+        </div>
+        <div class="reconcile-summary" id="reconcileBar">
+          <div class="reconcile-stat reconcile-stat--in">
+            <span class="reconcile-stat__label">Masuk</span>
+            <span class="reconcile-stat__value" id="sumIncome">Rp0</span>
+          </div>
+          <div class="reconcile-stat reconcile-stat--out">
+            <span class="reconcile-stat__label">Keluar</span>
+            <span class="reconcile-stat__value" id="sumExpense">Rp0</span>
+          </div>
+          <div class="reconcile-stat">
+            <span class="reconcile-stat__label">Bersih</span>
+            <span class="reconcile-stat__value" id="sumNet">Rp0</span>
+          </div>
+          <div class="reconcile-stat">
+            <span class="reconcile-stat__label">Dipilih</span>
+            <span class="reconcile-stat__value" id="sumSelected">0/0</span>
+          </div>
+          <div class="reconcile-stat reconcile-stat--dup is-hidden" id="sumDupWrap">
+            <span class="reconcile-stat__label">Duplikat</span>
+            <span class="reconcile-stat__value" id="sumDup">0</span>
+          </div>
+          <div class="reconcile-progress"><div id="selBar" style="width: 0%;"></div></div>
+        </div>
+        <div class="reconcile-toolbar">
+          <input type="search" id="searchInput" class="modal__input reconcile-search" placeholder="🔍 Cari deskripsi..." aria-label="Cari transaksi">
+          <div class="chip-row" role="group" aria-label="Filter tipe">
+            <button class="chip chip--active" data-filter="all">Semua</button>
+            <button class="chip" data-filter="Income">Masuk</button>
+            <button class="chip" data-filter="Expense">Keluar</button>
+            <button class="chip" data-filter="dup">Duplikat</button>
+          </div>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn--secondary btn--sm" id="btnCheckAll">☑️ Pilih semua</button>
+          <button class="btn btn--ghost btn--sm" id="btnUncheckAll">⬜ Hapus pilihan</button>
+          <button class="btn btn--ghost btn--sm" id="btnHideDup">👁️ Sembunyikan duplikat</button>
+        </div>
+      </div>
+
+      <div id="previewEmpty" class="card p-6 text-center is-hidden">
+        <div class="text-5xl mb-2">🔎</div>
+        <h3 class="mb-1">Tidak ada hasil</h3>
+        <p class="text-tertiary text-sm">Ubah kata kunci atau filter.</p>
+      </div>
+      <ul class="reconcile-list" id="previewBody"></ul>
+      <table class="sr-only" aria-hidden="true"><tbody id="previewBodyLegacy"></tbody></table>
+    </section>
+
+    <section id="step3" class="step-pane is-hidden" aria-label="Langkah 3: Selesai">
+      <div class="card p-8 text-center">
+        <div class="text-5xl mb-2">🎉</div>
+        <h3 class="mb-1">Import selesai</h3>
+        <p class="text-tertiary text-sm mb-4" id="doneSummary">-</p>
+        <div class="flex gap-3 justify-center flex-wrap">
+          <a href="03-inventory.html" class="btn btn--primary">🎒 Lihat Inventory</a>
+          <button class="btn btn--secondary" id="btnImportAgain">📥 Import lagi</button>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <!-- Bottom Navigation -->
+  <div class="bulk-bar is-hidden" id="bulkBar">
+    <div class="bulk-bar__inner">
+      <div class="bulk-bar__info">
+        <strong id="bulkCount">0 dipilih</strong>
+        <span class="text-tertiary text-sm" id="bulkTotal">Rp0</span>
+      </div>
+      <div class="bulk-bar__actions">
+        <button class="btn btn--ghost" id="btnBulkCancel">Batal</button>
+        <button class="btn btn--primary" id="btnConfirmImport">✅ Import</button>
+      </div>
+    </div>
+  </div>
+
   <nav class="bottom-nav" role="navigation" aria-label="Navigasi utama">
     <a href="../index.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🏠</span>
       <span class="bottom-nav__label">HOME</span>
-    </a>
-    <a href="01-guild-entrance.html" class="bottom-nav__item">
-      <span class="bottom-nav__icon">🔑</span>
-      <span class="bottom-nav__label">LOGIN</span>
     </a>
     <a href="02-guild-hall.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🏰</span>
@@ -120,24 +214,15 @@
       <span class="bottom-nav__icon">📜</span>
       <span class="bottom-nav__label">IMPORT</span>
     </a>
+    <button type="button" class="bottom-nav__item" data-logout>
+      <span class="bottom-nav__icon">🚪</span>
+      <span class="bottom-nav__label">LOGOUT</span>
+    </button>
   </nav>
 
 <div class="toast-container" aria-live="polite"></div>
 
+  <script type="module" src="../scripts/ui.js"></script>
   <script type="module" src="../scripts/screens/scrollReadingController.js"></script>
-  <script>
-    const root = document.documentElement;
-    const themeBtn = document.getElementById('themeToggle');
-    const stored = localStorage.getItem('ffh-theme');
-    if (stored === 'dark') root.classList.add('dark');
-    if (stored === 'light') root.classList.add('light');
-    themeBtn.addEventListener('click', () => {
-      const isDark = root.classList.toggle('dark');
-      root.classList.remove(isDark ? 'light' : 'dark');
-      localStorage.setItem('ffh-theme', isDark ? 'dark' : 'light');
-      themeBtn.textContent = isDark ? '☀️' : '🌙';
-    });
-    if (root.classList.contains('dark')) themeBtn.textContent = '☀️';
-  </script>
 </body>
 </html>

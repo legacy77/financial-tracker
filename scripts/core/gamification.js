@@ -144,9 +144,16 @@ async function saveState(state) {
   return state;
 }
 
+function localDateKey(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 async function checkStreak(state) {
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = localDateKey();
+  const yesterday = localDateKey(new Date(Date.now() - 86400000));
 
   if (!state.streakDates) state.streakDates = [];
 

@@ -14,6 +14,9 @@ export async function initSeedData() {
 }
 
 export async function createGuild(familyName) {
+  const existing = await getAll(GUILD_STORE);
+  if (existing.length > 0) return existing[0];
+
   const guild = {
     id: 'guild-1',
     familyName,

@@ -4,10 +4,11 @@
 // ============================================================
 
 import { getAll, put, openDB } from '../db.js';
+import { pushToServer } from './syncService.js';
 
 export async function exportBackup() {
-  const stores = ['guilds', 'members', 'pouches', 'transactions', 'bills', 'gamification', 'categories'];
-  const data = { app: 'KelolaRacun', version: 1, exportedAt: new Date().toISOString(), stores: {} };
+  const stores = ['guilds', 'members', 'pouches', 'transactions', 'bills', 'gamification', 'categories', 'imports', 'budgets'];
+  const data = { app: 'KelolaRacun', version: 3, exportedAt: new Date().toISOString(), stores: {} };
 
   for (const store of stores) {
     try {
@@ -59,7 +60,7 @@ export async function restoreBackup(data) {
 }
 
 export async function resetAllData() {
-  const stores = ['guilds', 'members', 'pouches', 'transactions', 'bills', 'gamification', 'categories'];
+  const stores = ['guilds', 'members', 'pouches', 'transactions', 'bills', 'gamification', 'categories', 'imports', 'budgets'];
   const db = await openDB();
   const names = stores.filter(s => db.objectStoreNames.contains(s));
   await new Promise((res, rej) => {
@@ -70,5 +71,6 @@ export async function resetAllData() {
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
+  try { await pushToServer(); } catch {}
   return true;
 }

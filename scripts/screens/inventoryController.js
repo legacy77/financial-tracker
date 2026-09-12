@@ -4,34 +4,85 @@
 // ============================================================
 
 import { initApp, showToast } from '../app.js';
-import { getGuild } from '../services/guildService.js';
+import { getGuild, updateGuild } from '../services/guildService.js';
+import { getState } from '../core/gamification.js';
 import { getPouches, createPouch, getPouch } from '../services/pouchService.js';
 import { getTransactionsByPouch, addTransaction } from '../services/transactionService.js';
+import { getCategories } from '../services/categoryService.js';
+import { canEdit } from '../core/authService.js';
 import { subscribe, publish } from '../core/eventBus.js';
 import {
-  formatRupiah, openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
+  formatRupiah, relativeDate, validateTransactionForm,
+  openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
 } from '../core/helpers.js';
-import { requireAuth } from '../core/authService.js';
+import { requireAuth, syncSessionRole } from '../core/authService.js';
 
 let activePouchId = null;
 
 async function fetchInventoryData() {
-  const [guild, pouches] = await Promise.all([getGuild(), getPouches()]);
+  const [guild, pouches, cats] = await Promise.all([getGuild(), getPouches(), getCategories()]);
   if (!activePouchId && pouches.length > 0) {
     activePouchId = pouches[0].id;
   }
   const transactions = activePouchId ? await getTransactionsByPouch(activePouchId) : [];
   const selectedPouch = pouches.find(p => p.id === activePouchId) || pouches[0] || null;
-  return { guild, pouches, transactions, selectedPouch };
+  return { guild, pouches, transactions, selectedPouch, cats };
 }
 
-function renderBanner({ guild, pouches }) {
+let cachedInvCats = [];
+
+function fillInvCatOptions(type) {
+  const sel = document.getElementById('invTxCategory');
+  if (!sel) return;
+  const prev = sel.value;
+  const list = cachedInvCats.filter((c) => !c.type || c.type === type);
+  const opts = list.length ? list : cachedInvCats;
+  sel.innerHTML = opts.map((c) => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.icon || '🏷️')} ${escapeHtml(c.name)}</option>`).join('');
+  if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+}
+
+function applyInvGating() {
+  if (!canEdit()) {
+    document.querySelectorAll('#invTxForm button[type="submit"], #pouchModalForm button[type="submit"]').forEach((el) => {
+      el.disabled = true;
+      el.title = 'Hanya Admin/Co-Manager yang dapat menambah data.';
+    });
+    document.querySelectorAll('[data-open-modal="pouchModal"], [data-open-modal="txModal"]').forEach((el) => {
+      if (el.tagName === 'BUTTON') {
+        el.disabled = true;
+        el.title = 'Hanya Admin/Co-Manager yang dapat menambah data.';
+      }
+    });
+  }
+}
+
+function parseAmount(raw) {
+  const cleaned = String(raw ?? '').replace(/[^0-9]/g, '');
+  return cleaned ? Number(cleaned) : NaN;
+}
+
+function toLocalISO(dateValue) {
+  if (!dateValue) return new Date().toISOString();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0).toISOString();
+  return new Date(dateValue).toISOString();
+}
+
+async function renderBanner({ guild, pouches }) {
   const totalGold = pouches.reduce((sum, p) => sum + (p.balance || 0), 0);
   document.querySelectorAll('.guild-banner__gold').forEach(el => {
     el.textContent = formatRupiah(totalGold);
   });
   const nameEl = document.querySelector('.guild-banner__title');
   if (nameEl && guild) nameEl.textContent = `${guild.familyName || 'Guild'}`;
+  let level = 1;
+  try { level = (await getState())?.level || 1; } catch {}
+  document.querySelectorAll('.guild-level').forEach((el) => {
+    el.textContent = `Lv. ${level}`;
+  });
+  if (guild && guild.guildLevel !== level) {
+    try { await updateGuild({ guildLevel: level }); } catch {}
+  }
 }
 
 function renderPouchesList(pouches, selectedId) {
@@ -39,16 +90,16 @@ function renderPouchesList(pouches, selectedId) {
   if (!container) return;
 
   if (!pouches.length) {
-    container.innerHTML = '<p class="text-tertiary text-sm p-4">Belum ada pouch. Buat pouch baru sekarang!</p>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state__icon">🎒</div><p class="font-semibold">Belum ada pouch</p><p class="text-sm text-tertiary">Buat pouch pertama untuk mulai menyimpan gold.</p></div>';
     return;
   }
 
+  container.classList.add('pouch-grid');
   container.innerHTML = pouches.map(p => {
     const meta = POUCH_TYPE_META[p.type] || { icon: '💰', label: p.type };
     const isSelected = p.id === selectedId;
-    const activeClass = isSelected ? 'border-color: var(--color-income-500); background: var(--color-income-25);' : '';
     return `
-      <div class="list__item card--interactive p-3 rounded-lg pouch-card" data-pouch-id="${p.id}" style="border: 1px solid var(--color-border-light); cursor: pointer; ${activeClass}">
+      <div class="list__item card--interactive p-3 rounded-lg pouch-card${isSelected ? ' pouch-card--active' : ''}" data-pouch-id="${p.id}">
         <div class="list__icon text-2xl">${meta.icon}</div>
         <div class="list__content">
           <div class="list__title font-bold">${escapeHtml(p.name)}</div>
@@ -86,7 +137,7 @@ function renderPouchDetail(pouch, transactions) {
       <span class="badge badge--success">${meta.label}</span>
     </div>
 
-    <div class="flex gap-4 mb-6" style="flex-wrap: wrap;">
+    <div class="flex gap-4 mb-6 balance-wrap">
       <div class="flex-1">
         <p class="text-tertiary text-sm">Saldo Saat Ini</p>
         <p class="text-2xl font-bold text-income">${formatRupiah(pouch.balance)} IDR</p>
@@ -99,7 +150,7 @@ function renderPouchDetail(pouch, transactions) {
     <div class="divider"></div>
 
     <h4 class="mb-3">Aktivitas Pouch</h4>
-    <div style="overflow-x: auto;">
+    <div class="table-scroll">
       <table class="table">
         <thead>
           <tr>
@@ -135,24 +186,47 @@ function renderPouchDetail(pouch, transactions) {
   });
 }
 
+function syncTransferWrap() {
+  const typeSel = document.getElementById('invTxType');
+  const wrap = document.getElementById('invToPouchWrap');
+  const toSel = document.getElementById('invToPouchId');
+  const isTransfer = typeSel?.value === 'Transfer';
+  if (wrap) wrap.hidden = !isTransfer;
+  if (toSel) toSel.required = !!isTransfer;
+}
+
 function setupForms(pouches) {
+  const opts = pouches.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${formatRupiah(p.balance)})</option>`).join('');
   const pouchSelect = document.getElementById('invPouchId');
   if (pouchSelect) {
-    pouchSelect.innerHTML = pouches.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${formatRupiah(p.balance)})</option>`).join('');
+    pouchSelect.innerHTML = opts;
   }
+  const toSelect = document.getElementById('invToPouchId');
+  if (toSelect) {
+    const prev = toSelect.value;
+    toSelect.innerHTML = opts;
+    if (prev && [...toSelect.options].some((o) => o.value === prev)) toSelect.value = prev;
+  }
+  syncTransferWrap();
 
   const txForm = document.getElementById('invTxForm');
   if (txForm && !txForm.dataset.bound) {
     txForm.dataset.bound = 'true';
     txForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const amount = parseAmount(txForm.elements.namedItem('amount').value);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        showToast('Nominal tidak valid', 'danger');
+        return;
+      }
       const data = {
         pouchId: txForm.elements.namedItem('pouchId').value,
+        toPouchId: txForm.elements.namedItem('toPouchId')?.value || null,
         type: txForm.elements.namedItem('type').value,
-        amount: Number(txForm.elements.namedItem('amount').value),
+        amount,
         category: txForm.elements.namedItem('category').value,
         notes: txForm.elements.namedItem('notes').value,
-        date: new Date().toISOString()
+        date: toLocalISO(txForm.elements.namedItem('date')?.value)
       };
       const errors = validateTransactionForm(data);
       if (Object.keys(errors).length) {
@@ -160,6 +234,25 @@ function setupForms(pouches) {
         return;
       }
       try {
+        if (data.type === 'Expense') {
+          try {
+            const { getCategories: gc } = await import('../services/categoryService.js');
+            const { getBudgets: gb, monthKey: mk, monthSpending: ms } = await import('../services/budgetService.js');
+            const { getTransactions: gt } = await import('../services/transactionService.js');
+            const cats = await gc();
+            const cat = cats.find((c) => c.name === data.category);
+            if (cat && (!cat.type || cat.type === 'Expense')) {
+              const month = mk();
+              const b = (await gb(month)).find((x) => x.categoryId === cat.id);
+              if (b && b.amount > 0) {
+                const spent = (await ms(await gt(), month))[data.category] || 0;
+                if (spent + data.amount > b.amount) {
+                  showToast(`⚠️ ${data.category} lewat budget (${formatRupiah(spent + data.amount)} / ${formatRupiah(b.amount)})`, 'warning');
+                }
+              }
+            }
+          } catch {}
+        }
         await addTransaction(data);
         showToast('Transaksi berhasil ditambahkan!', 'success');
         closeModal('txModal');
@@ -175,10 +268,11 @@ function setupForms(pouches) {
     pouchForm.dataset.bound = 'true';
     pouchForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const balance = parseAmount(pouchForm.elements.namedItem('pouchBalance').value || 0);
       const data = {
         name: pouchForm.elements.namedItem('pouchName').value,
         type: pouchForm.elements.namedItem('pouchType').value,
-        balance: Number(pouchForm.elements.namedItem('pouchBalance').value || 0)
+        balance: Number.isFinite(balance) ? balance : 0
       };
       if (!data.name) {
         showToast('Nama pouch wajib diisi', 'danger');
@@ -203,11 +297,19 @@ function setupForms(pouches) {
   // Auth guard
   requireAuth();
 
+  try {
+    const ok = await syncSessionRole();
+    if (!ok) return;
+  } catch {}
+
   const data = await fetchInventoryData();
-  renderBanner(data);
+  await renderBanner(data);
   renderPouchesList(data.pouches, activePouchId);
   renderPouchDetail(data.selectedPouch, data.transactions);
+  cachedInvCats = data.cats;
+  fillInvCatOptions(document.getElementById('invTxType')?.value || 'Income');
   setupForms(data.pouches);
+  applyInvGating();
 
   document.querySelectorAll('[data-open-modal]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -219,12 +321,25 @@ function setupForms(pouches) {
     });
   });
 
+  const typeSel = document.getElementById('invTxType');
+  if (typeSel && !typeSel.dataset.bound) {
+    typeSel.dataset.bound = 'true';
+    typeSel.addEventListener('change', () => {
+      fillInvCatOptions(typeSel.value);
+      syncTransferWrap();
+    });
+  }
+
   subscribe('kelola-racun:updated', async () => {
     const fresh = await fetchInventoryData();
-    renderBanner(fresh);
+    await renderBanner(fresh);
     renderPouchesList(fresh.pouches, activePouchId);
     renderPouchDetail(fresh.selectedPouch, fresh.transactions);
+    cachedInvCats = fresh.cats;
+    const modalOpen = !!document.querySelector('#txModal.modal--open');
+    if (!modalOpen) fillInvCatOptions(document.getElementById('invTxType')?.value || 'Income');
     setupForms(fresh.pouches);
+    applyInvGating();
   });
 
   subscribe('kelola-racun:inventory-switch', async (e) => {

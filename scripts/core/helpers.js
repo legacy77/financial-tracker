@@ -36,6 +36,10 @@ export function validateTransactionForm(data) {
   if (!data.amount || Number(data.amount) <= 0) errors.amount = 'Nominal harus lebih dari 0';
   if (!data.category) errors.category = 'Kategori wajib diisi';
   if (data.date && isNaN(new Date(data.date))) errors.date = 'Tanggal tidak valid';
+  if (data.type === 'Transfer') {
+    if (!data.toPouchId) errors.toPouchId = 'Pilih pouch tujuan';
+    else if (data.toPouchId === data.pouchId) errors.toPouchId = 'Pouch tujuan harus berbeda';
+  }
   return errors;
 }
 

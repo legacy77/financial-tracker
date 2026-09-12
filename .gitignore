@@ -18,6 +18,10 @@ opencode.jsonc
 logs/
 *.log
 
+# Local data & uploads (sync server db, test statements)
+data/
+template/
+
 # OS temp
 .DS_Store
 Thumbs.db
