@@ -22,6 +22,10 @@ logs/
 data/
 template/
 
+# Catatan kerja internal & analisis (bukan dokumen publik)
+todo.md
+GAP_ANALYSIS.md
+
 # OS temp
 .DS_Store
 Thumbs.db

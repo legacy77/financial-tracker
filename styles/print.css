@@ -4,6 +4,19 @@
    ========================================================================== */
 
 @media print {
+  :root, html { color-scheme: light; }
+
+  :root {
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #f5f5f5;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #333333;
+    --color-text-tertiary: #4a4a4a;
+    --card-bg: #ffffff;
+    --input-bg: #ffffff;
+  }
+
   body {
     background-color: #ffffff !important;
     color: #000000 !important;

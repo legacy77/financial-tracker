@@ -6,7 +6,7 @@
 import { add, getAll, getById, put, remove } from '../db.js';
 import { updatePouchBalance } from './pouchService.js';
 import { publish } from '../core/eventBus.js';
-import { onTransactionAdded } from '../core/gamification.js';
+import { onTransactionAdded, onTransactionDeleted } from '../core/gamification.js';
 
 const STORE = 'transactions';
 
@@ -17,6 +17,35 @@ export async function getTransactions() {
 export async function getTransactionsByPouch(pouchId) {
   const all = await getAll(STORE);
   return all.filter((t) => t.pouchId === pouchId);
+}
+
+export async function markTransactionsReviewed(ids) {
+  const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
+  if (!wanted.size) return [];
+  const transactions = await getAll(STORE);
+  const reviewedAt = new Date().toISOString();
+  const updated = [];
+  for (const tx of transactions) {
+    if (!wanted.has(tx.id)) continue;
+    const saved = await put(STORE, { ...tx, reviewedAt });
+    updated.push(saved);
+  }
+  if (updated.length) publish('kelola-racun:updated', { type: 'transaction' });
+  return updated;
+}
+
+export async function getAgingReport(days = 30) {
+  const threshold = Number.isFinite(Number(days)) ? Math.max(0, Number(days)) : 30;
+  const now = Date.now();
+  const transactions = await getAll(STORE);
+  return transactions
+    .filter((tx) => !tx.reviewedAt)
+    .map((tx) => {
+      const time = new Date(tx.date).getTime();
+      return { ...tx, ageDays: Math.max(0, Math.floor((now - time) / 86400000)) };
+    })
+    .filter((tx) => tx.ageDays > threshold)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
 export async function addTransaction(txData) {
@@ -101,6 +130,11 @@ export async function deleteTransaction(id, opts = {}) {
   if (tx) {
     for (const d of deltasFor(tx)) {
       await updatePouchBalance(d.pouchId, -d.delta);
+    }
+    try {
+      await onTransactionDeleted();
+    } catch (err) {
+      console.warn('Gamification update gagal:', err);
     }
   }
   publish('kelola-racun:updated', { type: 'transaction' });

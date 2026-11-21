@@ -19,16 +19,27 @@ export async function getPouch(id) {
 export async function createPouch(data) {
   const opening = Number(data.balance) || 0;
   const pouch = {
-    id: 'pouch-' + Date.now(),
+    id: 'pouch-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     guildId: data.guildId || 'guild-1',
     name: data.name,
     type: data.type || 'Cash',
     balance: opening,
-    openingBalance: opening
+    openingBalance: opening,
+    target: Number(data.target) > 0 ? Number(data.target) : null,
+    deadline: data.deadline || null
   };
   const saved = await add(STORE, pouch);
   publish('kelola-racun:updated', { type: 'pouch' });
   return saved;
+}
+
+export async function ensureDefaultPouches(guildId) {
+  const existing = await getPouches();
+  if (existing.length) return existing;
+  const gid = guildId || 'guild-1';
+  await createPouch({ guildId: gid, name: 'Tunai', type: 'Cash', balance: 0 });
+  await createPouch({ guildId: gid, name: 'Bank', type: 'Bank', balance: 0 });
+  return getPouches();
 }
 
 export async function updatePouchBalance(pouchId, amountChange) {
@@ -38,6 +49,37 @@ export async function updatePouchBalance(pouchId, amountChange) {
   const saved = await put(STORE, pouch);
   publish('kelola-racun:updated', { type: 'pouch' });
   return saved;
+}
+
+export async function setSavingsGoal(pouchId, { target, deadline } = {}) {
+  const pouch = await getPouch(pouchId);
+  if (!pouch) throw new Error('Pouch not found');
+  if (pouch.type !== 'Savings') throw new Error('Goal hanya untuk pouch Savings');
+  const nextTarget = Number(target);
+  if (!Number.isFinite(nextTarget) || nextTarget <= 0) throw new Error('Target harus lebih dari 0');
+  if (!deadline || Number.isNaN(new Date(deadline).getTime())) throw new Error('Deadline tidak valid');
+  const saved = await put(STORE, { ...pouch, target: nextTarget, deadline });
+  publish('kelola-racun:updated', { type: 'pouch' });
+  return saved;
+}
+
+export function getSavingsProgress(pouch, now = new Date()) {
+  const target = Number(pouch?.target) || 0;
+  const current = Number(pouch?.balance) || 0;
+  const deadlineTime = pouch?.deadline ? new Date(pouch.deadline).getTime() : NaN;
+  const remaining = Math.max(0, target - current);
+  const monthsLeft = Number.isFinite(deadlineTime)
+    ? Math.max(0, (deadlineTime - now.getTime()) / (365.2425 / 12 * 86400000))
+    : 0;
+  return {
+    current,
+    target,
+    progress: target ? Math.min(1, current / target) : 0,
+    remaining,
+    monthsLeft,
+    monthlyContribution: monthsLeft > 0 ? remaining / monthsLeft : remaining,
+    overdue: Number.isFinite(deadlineTime) && deadlineTime < now.getTime()
+  };
 }
 
 /**

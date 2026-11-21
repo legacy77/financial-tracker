@@ -5,7 +5,7 @@
 
 import { openDB } from './db.js';
 import { getGuild, updateGuild } from './services/guildService.js';
-import { getPouches, createPouch, getPouch, reconcileAllPouches } from './services/pouchService.js';
+import { getPouches, createPouch, getPouch, reconcileAllPouches, ensureDefaultPouches } from './services/pouchService.js';
 import { getTransactions, addTransaction, getTransactionsByPouch } from './services/transactionService.js';
 import { getBills, getPendingBills, addBill, togglePaid } from './services/billService.js';
 import { initCategorySeed, getCategories, createCategory, deleteCategory } from './services/categoryService.js';
@@ -15,13 +15,25 @@ import { syncWithServer } from './core/syncService.js';
 export async function initApp() {
   try {
     await openDB();
-    await syncWithServer();
+    await notifySyncFailure(syncWithServer());
     await initCategorySeed();
+    const guild = await getGuild();
+    if (guild) await ensureDefaultPouches(guild.id);
     await reconcileAllPouches();
     console.log('🏰 KelolaRacun DB initialized & seeded');
   } catch (err) {
     console.error('❌ Failed to init KelolaRacun DB:', err);
     showToast('Gagal inisialisasi database: ' + err.message, 'error');
+  }
+}
+
+export async function notifySyncFailure(operation) {
+  try {
+    const result = await operation;
+    if (result.synced) return;
+    showToast('Sinkronisasi gagal: ' + (result.reason || 'server tidak mengonfirmasi sinkronisasi.'), 'danger');
+  } catch (err) {
+    showToast('Sinkronisasi gagal: ' + err.message, 'danger');
   }
 }
 
@@ -51,6 +63,7 @@ window.KelolaRacun = {
   getPouches,
   createPouch,
   getPouch,
+  ensureDefaultPouches,
   reconcileAllPouches,
   getTransactions,
   getTransactionsByPouch,

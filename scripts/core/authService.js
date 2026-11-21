@@ -4,14 +4,15 @@
 // ============================================================
 
 import { publish } from './eventBus.js';
-import { getMember } from '../services/memberService.js';
+import { getMember, defaultRole, isAllowedMemberId } from '../services/memberService.js';
 import { showToast } from '../app.js';
 
 const SESSION_KEY = 'session';
 
 export function getSession() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY));
+    return isAllowedMemberId(session?.memberId) ? session : null;
   } catch {
     return null;
   }
@@ -22,6 +23,7 @@ export function clearSession() {
 }
 
 export function saveSession(session) {
+  if (!isAllowedMemberId(session?.memberId)) throw new Error('Profil tidak diizinkan');
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
@@ -35,16 +37,9 @@ export function getCurrentMemberId() {
   return s && s.expiresAt > Date.now() ? s.memberId : null;
 }
 
-const CANON_ROLES = ['Admin', 'Co-Manager', 'Viewer'];
-function canonRole(r) {
-  if (r == null) return r;
-  const found = CANON_ROLES.find((c) => c.toLowerCase() === String(r).trim().toLowerCase());
-  return found || r;
-}
-
 export function getCurrentRole() {
   const s = getSession();
-  return s && s.expiresAt > Date.now() ? canonRole(s.role) : null;
+  return s && s.expiresAt > Date.now() ? defaultRole(s.memberId) : null;
 }
 
 export function getCurrentGuildId() {
@@ -88,11 +83,11 @@ export async function syncSessionRole() {
       logout();
       return false;
     }
-    const fresh = canonRole(m.role);
+    const fresh = defaultRole(m.id);
     if (fresh && fresh !== s.role) {
       saveSession({ ...s, role: fresh });
       publish('kelola-racun:session', { role: fresh });
-      try { showToast(`Peran diperbarui: ${s.role || '?'} → ${fresh}`, 'success'); } catch {}
+      try { showToast(`Peran diperbarui: ${fresh}`, 'success'); } catch {}
     }
     return true;
   } catch (err) {
@@ -108,7 +103,7 @@ export function getCurrentMember() {
   return {
     memberId: s.memberId,
     guildId: s.guildId,
-    role: s.role
+    role: defaultRole(s.memberId)
   };
 }
 
@@ -140,7 +135,7 @@ export function canViewReports() {
 // Guard terpusat aksi Admin: segarkan role dari DB dulu, tolak + toast bila bukan Admin.
 export async function requireAdmin(action = 'mengelola kategori') {
   try { await syncSessionRole(); } catch {}
-  if (canonRole(getCurrentRole()) !== 'Admin') {
+  if (getCurrentRole() !== 'Admin') {
     showToast(`Hanya Admin yang dapat ${action}.`, 'danger');
     return false;
   }

@@ -1,134 +1,79 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="guild-entrance">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
   <title>Masuk — KelolaRacun</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
   <link rel="stylesheet" href="../styles/components.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body class="auth-shell">
-  <header class="auth-top-bar" role="banner">
-    <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema" title="Ganti tema">🌙</button>
-  </header>
+  <header class="auth-top-bar" role="banner"></header>
 
   <main class="container auth-center">
     <div class="auth-brand-stacked text-center mb-6">
-      <div class="auth-brand-icon">🏰</div>
+      <div class="auth-brand-icon" aria-hidden="true">✦</div>
       <h1 class="auth-brand-title">KelolaRacun</h1>
       <p class="text-tertiary text-xs">Family Finance Hub</p>
     </div>
 
     <div class="card p-8 auth-card">
-
-      <!-- VIEW 1: Onboarding (first run, guild kosong) -->
       <div id="viewOnboarding" hidden>
         <div class="text-center mb-6">
-          <div class="text-4xl mb-3">🛡️</div>
-          <h2 class="mb-2">Buat Guild Keluarga</h2>
-          <p class="text-tertiary text-sm">Satu langkah — guild + admin pertama langsung jadi.</p>
+          <div class="gate-mark gate-mark--warm" aria-hidden="true">✦</div>
+          <p class="eyebrow">PROLOG / GUILD HALL</p>
+          <h2 class="mb-2">Bangun Guild Keluarga</h2>
+          <p class="text-tertiary text-sm">Buka gerbang pertama. Nama guild jadi jejak petualanganmu.</p>
         </div>
 
         <form id="onboardForm" novalidate>
-          <div class="mb-4">
+          <div class="mb-6">
             <label class="block text-sm font-semibold mb-2" for="obGuildName">Nama Keluarga (Guild)</label>
             <input type="text" id="obGuildName" class="input" placeholder="Contoh: Keluarga Santoso" required maxlength="50" autocomplete="off">
             <p class="field-error" id="errObGuildName"></p>
           </div>
-
-          <div class="mb-4">
-            <label class="block text-sm font-semibold mb-2" for="obAdminName">Nama Kamu (Admin)</label>
-            <input type="text" id="obAdminName" class="input" placeholder="Contoh: Budi" required maxlength="30" autocomplete="off">
-            <p class="field-error" id="errObAdminName"></p>
-          </div>
-
-          <div class="mb-4">
-            <label class="block text-sm font-semibold mb-2" for="obPin">PIN 6 Digit</label>
-            <div class="pin-wrap">
-              <input type="password" id="obPin" class="input pin-input" placeholder="6 digit angka" required minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="new-password">
-              <button type="button" id="toggleObPin" class="btn btn--ghost pin-toggle" aria-label="Tampilkan PIN">👁️</button>
-            </div>
-            <p class="field-error" id="errObPin"></p>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-semibold mb-2" for="obPin2">Ulangi PIN</label>
-            <input type="password" id="obPin2" class="input" placeholder="Ulangi 6 digit" required minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="new-password">
-            <p class="field-error" id="errObPin2"></p>
-          </div>
-
-          <button type="submit" id="obSubmit" class="btn btn--primary w-full justify-center py-3 text-base">🚀 Buat Guild & Masuk</button>
+          <button type="submit" id="obSubmit" class="btn btn--primary w-full justify-center py-3 text-base">Mulai Petualangan</button>
         </form>
       </div>
 
-      <!-- VIEW 2: Login (guild ada) -->
       <div id="viewLogin" hidden>
         <div class="text-center mb-6">
-          <div class="text-4xl mb-3">🔐</div>
-          <h2 class="mb-2">Masuk ke Guild</h2>
-          <p class="text-tertiary text-sm" id="loginSubtitle">Langkah 1 dari 2 — pilih anggota</p>
+          <div class="gate-mark gate-mark--cool" aria-hidden="true">◈</div>
+          <p class="eyebrow">GERBANG PENJAGA</p>
+          <h2 class="mb-2">Siapa yang datang?</h2>
+          <p class="text-tertiary text-sm" id="loginSubtitle">Pilih penjaga untuk memasuki guild.</p>
         </div>
 
-        <!-- Step 1: pick member -->
         <div id="stepPick">
           <div id="memberList" class="grid member-grid">
-            <div class="text-tertiary text-sm p-4 text-center">Memuat anggota...</div>
+            <button type="button" class="guard-card guard-card--warm" data-id="zara" aria-label="Masuk sebagai Zara, Admin">
+              <span class="guard-crest" aria-hidden="true">
+                <svg viewBox="0 0 16 16" role="img" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v2h3v2h2v6h-2v2H9v2H7v-2H5v-2H3V5h2V3h2zM6 5h4v2H6zm-1 4h6v2H5z"/></svg>
+              </span>
+              <span class="guard-name">Zara</span>
+              <span class="guard-role">Admin</span>
+              <span class="guard-greeting">“Gerbang siap. Mari susun takdir.”</span>
+              <span class="guard-action">Masuk <span aria-hidden="true">›</span></span>
+            </button>
+            <button type="button" class="guard-card guard-card--cool" data-id="dhika" aria-label="Masuk sebagai Dhika, Member">
+              <span class="guard-crest" aria-hidden="true">
+                <svg viewBox="0 0 16 16" role="img" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v2h2v2h2v2h2v3h-2v2h-2v2H9v1H7v-1H5v-2H3v-2H1V7h2V5h2V3h2zm1 4H6v2H4v2h3v2h2V9h3V7H9V5z"/></svg>
+              </span>
+              <span class="guard-name">Dhika</span>
+              <span class="guard-role">Member</span>
+              <span class="guard-greeting">“Langkah kecil, loot besar.”</span>
+              <span class="guard-action">Masuk <span aria-hidden="true">›</span></span>
+            </button>
           </div>
           <p class="field-error field-error--center" id="errPick"></p>
         </div>
-
-        <!-- Step 2: PIN -->
-        <div id="stepPin" hidden>
-          <p class="stepper">Langkah 2 dari 2</p>
-          <div class="text-center mb-4">
-            <p class="font-semibold" id="selectedMemberName">Pilih anggota</p>
-            <p class="text-tertiary text-xs">Masukkan PIN 6 digit</p>
-          </div>
-
-          <form id="pinForm" novalidate>
-            <div class="otp-row mb-2" id="otpRow">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="0" autocomplete="off" aria-label="Digit PIN 1">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="1" autocomplete="off" aria-label="Digit PIN 2">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="2" autocomplete="off" aria-label="Digit PIN 3">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="3" autocomplete="off" aria-label="Digit PIN 4">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="4" autocomplete="off" aria-label="Digit PIN 5">
-              <input class="input otp-box" type="password" inputmode="numeric" maxlength="1" data-otp="5" autocomplete="off" aria-label="Digit PIN 6">
-            </div>
-            <p class="field-error field-error--center" id="errPin"></p>
-
-            <div class="flex justify-between mt-4 mb-4">
-              <button type="button" id="backToMembers" class="btn btn--ghost">← Ganti anggota</button>
-              <button type="button" id="togglePinShow" class="btn btn--ghost">👁️ Tampil</button>
-            </div>
-
-            <button type="submit" id="pinSubmit" class="btn btn--primary w-full justify-center py-3">🔑 Masuk</button>
-          </form>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="text-center">
-          <p class="text-tertiary text-sm">Lupa PIN? Minta Admin reset di <strong>Guild Hall → Kelola Anggota</strong>.</p>
-        </div>
       </div>
-
     </div>
   </main>
 
-  <!-- Lockout overlay -->
-  <div id="lockoutOverlay" class="lockout-overlay" role="alertdialog" aria-modal="true" aria-labelledby="lockoutTitle" hidden>
-    <div class="text-4xl mb-4">🔒</div>
-    <h3 class="mb-2" id="lockoutTitle">Coba Lagi Nanti</h3>
-    <p class="mb-4">Terlalu banyak PIN yang salah. Coba dalam <b id="lockoutTimer" aria-live="polite">60</b> detik.</p>
-    <button class="btn btn--primary" id="lockoutRetry">Coba Lagi</button>
-  </div>
-
   <div class="toast-container" aria-live="polite"></div>
-
   <script type="module" src="../scripts/ui.js"></script>
   <script type="module" src="../scripts/screens/loginController.js"></script>
 </body>

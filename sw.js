@@ -3,13 +3,14 @@
 // KelolaRacun Phase 3
 // ============================================================
 
-const CACHE_NAME = 'kelolaracun-v19';
+const CACHE_NAME = 'kelolaracun-v22';
 const ASSETS = [
   './index.html',
   './styles/modern-theme.css',
   './styles/components.css',
   './styles/print.css',
   './vendor/chart.umd.js',
+  './vendor/xlsx.mini.min.js',
   './scripts/app.js',
   './scripts/ui.js',
   './scripts/db.js',
@@ -19,6 +20,7 @@ const ASSETS = [
   './scripts/screens/scrollReadingController.js',
   './scripts/screens/loginController.js',
   './scripts/screens/registerController.js',
+  './scripts/screens/summaryController.js',
   './scripts/core/helpers.js',
   './scripts/core/eventBus.js',
   './scripts/core/gamification.js',
@@ -29,6 +31,7 @@ const ASSETS = [
   './scripts/core/authService.js',
   './scripts/core/crypto.js',
   './scripts/core/syncService.js',
+  './scripts/core/payBill.js',
   './scripts/services/guildService.js',
   './scripts/services/memberService.js',
   './scripts/services/pouchService.js',
@@ -37,12 +40,12 @@ const ASSETS = [
   './scripts/services/categoryService.js',
   './scripts/services/importService.js',
   './scripts/services/budgetService.js',
-  './scripts/core/payBill.js',
   './screens/00-register.html',
   './screens/01-guild-entrance.html',
   './screens/02-guild-hall.html',
   './screens/03-inventory.html',
   './screens/04-scroll-reading.html',
+  './screens/05-summary.html',
   './manifest.json'
 ];
 

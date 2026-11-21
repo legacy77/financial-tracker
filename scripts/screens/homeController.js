@@ -21,6 +21,7 @@ import {
 } from '../core/helpers.js';
 import { computeHealthScore } from '../core/healthScore.js';
 import { subscribe } from '../core/eventBus.js';
+import { categorizeTransaction } from '../services/aiCategorizer.js';
 
 function sameDay(a, b) {
   const d1 = new Date(a);
@@ -32,6 +33,7 @@ async function fetchHome() {
   const [guild, pouches, transactions, bills, cats, state] = await Promise.all([
     getGuild(), getPouches(), getTransactions(), getBills(), getCategories(), getState()
   ]);
+  window.__categories = cats;
   return { guild, pouches, transactions, bills, cats, state };
 }
 
@@ -176,6 +178,17 @@ function renderMiniQuest(guild, health) {
   set('hqIncomeTxt', `${incPct}% · ${formatRupiah(health.monthIncome)}`);
   set('hqExpenseTxt', `${expPct}% · ${formatRupiah(health.monthExpense)}`);
   set('hqScore', `${health.overall}/100 ${health.status.icon}`);
+  let adv = document.getElementById('hqAdvice');
+  if (!adv) {
+    const card = document.getElementById('hqScore')?.closest('.card');
+    if (card) {
+      adv = document.createElement('p');
+      adv.id = 'hqAdvice';
+      adv.className = 'text-tertiary text-xs mt-2';
+      card.appendChild(adv);
+    }
+  }
+  if (adv) adv.textContent = health.narrative || '';
 }
 
 let pouchCount = 0;
@@ -254,6 +267,16 @@ function populateTxForm(pouches, cats) {
 function setupTxForm() {
   const form = document.getElementById('txModalForm');
   if (!form) return;
+  form.category?.addEventListener('change', () => { form.category.dataset.manual = 'true'; });
+  form.addEventListener('reset', () => { delete form.category.dataset.manual; });
+  const suggest = () => {
+    try {
+      const result = categorizeTransaction(form.notes.value, form.amount.value, form.txType.value, window.__categories || []);
+      if (form.category.dataset.manual !== 'true' && result.categoryId && result.confidence > 0.7 && result.categoryName) form.category.value = result.categoryName;
+    } catch {}
+  };
+  form.notes?.addEventListener('input', () => setTimeout(suggest, 0));
+  form.notes?.addEventListener('blur', suggest);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!pouchCount) {
@@ -370,14 +393,44 @@ async function renderAll() {
         const typeInput = document.getElementById('txTypeInput');
         if (typeInput) typeInput.value = type;
         const titleEl = document.getElementById('txModalTitle');
-        if (titleEl) titleEl.textContent = type === 'Income' ? '➕ Tambah Loot (Pemasukan)' : '💸 Catat Pengeluaran';
+        if (titleEl) {
+          const emoji = titleEl.querySelector('.modal__emoji');
+          emoji.textContent = type === 'Income' ? '➕' : '💸';
+          titleEl.replaceChildren(emoji, document.createTextNode(type === 'Income' ? ' Uang Masuk' : ' Uang Keluar'));
+        }
         fillCatOptions(type);
+      }
+      const dateInput = document.getElementById('txDate');
+      if (dateInput && !dateInput.value) {
+        const d = new Date();
+        dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
       openModal(btn.dataset.openModal);
     });
   });
   setupTxForm();
   setupPayBillForm();
+  document.querySelectorAll('#quickAmountBtns [data-quick]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const amount = document.getElementById('txAmount');
+      if (amount) amount.value = btn.dataset.quick;
+      const typeInput = document.getElementById('txTypeInput');
+      if (typeInput) typeInput.value = 'Expense';
+      const titleEl = document.getElementById('txModalTitle');
+      if (titleEl) {
+        const emoji = titleEl.querySelector('.modal__emoji');
+        emoji.textContent = '💸';
+        titleEl.replaceChildren(emoji, document.createTextNode(' Uang Keluar'));
+      }
+      fillCatOptions('Expense');
+      const dateInput = document.getElementById('txDate');
+      if (dateInput && !dateInput.value) {
+        const d = new Date();
+        dateInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      openModal('txModal');
+    });
+  });
   subscribe('kelola-racun:updated', async () => {
     await renderAll();
     applyGating();
