@@ -1,4 +1,4 @@
-﻿# KelolaRacun — Family Finance Hub
+﻿# 💜 KelolaRacun: Family Finance Hub
 
 > **Kelola racun-mu, raih goal-mu!**
 
