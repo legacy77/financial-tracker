@@ -1,6 +1,5 @@
 // ============================================================
-// scripts/screens/scrollReadingController.js — CSV/Excel import preview & storage
-// KelolaRacun Phase 3
+// scripts/screens/scrollReadingController.js — template bulk import
 // ============================================================
 
 import { initApp, showToast } from '../app.js';
@@ -11,7 +10,6 @@ import { addTransaction } from '../services/transactionService.js';
 import { logImport, getImports } from '../services/importService.js';
 import { formatRupiah, setupModalClose, escapeHtml } from '../core/helpers.js';
 import { autoTag } from '../core/autoTag.js';
-import { parsePdfItemsToRows, parseOcrWordsToRows, markDuplicates, rowHash } from '../core/seabankParser.js';
 import { getCategories } from '../services/categoryService.js';
 import { requireAuth, syncSessionRole, canEdit } from '../core/authService.js';
 
@@ -21,7 +19,57 @@ let categoryList = [];
 let expandedIdx = -1;
 let searchQuery = '';
 let typeFilter = 'all';
+let pouchList = [];
 const MAX_FILE = 10 * 1024 * 1024;
+const TEMPLATE_HEADERS = ['Date', 'Deskripsi Transaksi', 'Amount', 'Cashflow (Source of fund)', 'Kategori'];
+
+function normalize(value) {
+  return String(value ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function parseDate(value) {
+  if (value == null || value === '') return '';
+  if (value instanceof Date && !isNaN(value)) return value.toISOString().slice(0, 10);
+  if (typeof value === 'number') {
+    const date = new Date((value - 25569) * 86400000);
+    return isNaN(date) ? '' : date.toISOString().slice(0, 10);
+  }
+  const text = normalize(value);
+  const iso = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(text);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+  const dmy = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(text);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+  const parsed = new Date(text);
+  return isNaN(parsed) ? '' : parsed.toISOString().slice(0, 10);
+}
+
+function parseAmount(value) {
+  if (typeof value === 'number') {
+    return isNaN(value) ? 0 : Math.round(Math.abs(value) * 100) / 100;
+  }
+  let text = normalize(value).replace(/Rp\s*/i, '').trim();
+  if (!text) return 0;
+  if (text.includes('.') && text.includes(',')) {
+    text = text.replace(/\./g, '').replace(',', '.');
+  } else if (text.includes(',')) {
+    if (/,\d{3}$/.test(text) && !text.includes('.')) {
+      text = text.replace(/,/g, '');
+    } else {
+      text = text.replace(',', '.');
+    }
+  } else if (text.includes('.')) {
+    if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+      text = text.replace(/\./g, '');
+    }
+  }
+  const raw = Number(text);
+  if (isNaN(raw) || raw === 0) return 0;
+  return Math.round(Math.abs(raw) * 100) / 100;
+}
+
+function rowHash(r) {
+  return [r.date, normalize(r.desc).toLowerCase(), Math.round(r.amount * 100), r.type].join('|');
+}
 
 function toLocalISO(dateValue) {
   if (!dateValue) return new Date().toISOString();
@@ -32,6 +80,7 @@ function toLocalISO(dateValue) {
 
 async function initBanner() {
   const [guild, pouches, state] = await Promise.all([getGuild(), getPouches(), getState()]);
+  pouchList = pouches;
   const totalGold = pouches.reduce((sum, p) => sum + (p.balance || 0), 0);
   document.querySelectorAll('.guild-banner__gold').forEach(el => {
     el.textContent = formatRupiah(totalGold);
@@ -61,32 +110,6 @@ async function initBanner() {
   }
 }
 
-function setOcrStatus(msg, pct = null) {
-  const status = document.getElementById('ocrStatus');
-  const bar = document.getElementById('ocrBar');
-  const legacy = document.getElementById('ocrStatusLegacy');
-  if (legacy) legacy.textContent = msg || '';
-  if (!status) return;
-  status.textContent = msg || '';
-  if (bar && pct != null) bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-}
-
-function showOcrWrap(fileName) {
-  const wrap = document.getElementById('ocrWrap');
-  const nameEl = document.getElementById('ocrFileName');
-  if (nameEl) nameEl.textContent = fileName || '-';
-  if (wrap) wrap.classList.remove('is-hidden');
-  setOcrStatus('Menyiapkan...', 2);
-}
-
-function hideOcrWrap() {
-  const wrap = document.getElementById('ocrWrap');
-  const bar = document.getElementById('ocrBar');
-  if (bar) bar.style.width = '100%';
-  setOcrStatus('Selesai', 100);
-  setTimeout(() => { if (wrap) wrap.classList.add('is-hidden'); }, 800);
-}
-
 function gotoStep(n) {
   [1, 2, 3].forEach((s) => {
     document.getElementById('step' + s)?.classList.toggle('is-hidden', s !== n);
@@ -103,6 +126,126 @@ function gotoStep(n) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function csvEscape(value) {
+  const text = normalize(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadText(fileName, text, mime) {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildTemplateCsv() {
+  const headers = TEMPLATE_HEADERS.map(csvEscape).join(',');
+  const pouchNames = pouchList.map(p => csvEscape(p.name)).join(' / ');
+  const catNames = categoryList.map(c => csvEscape(c.name)).join(' / ');
+  const rows = [
+    headers,
+    ['2026-03-15', csvEscape('Belanja Bulanan'), 150000, csvEscape('Kas Utama'), csvEscape('Makanan')].join(','),
+    ['2026-03-16', csvEscape('Gaji Transfer'), 5000000, csvEscape('BCA'), csvEscape('Gaji')].join(','),
+    ['2026-03-17', csvEscape('Langganan Internet'), 300000, '', csvEscape('Utilitas')].join(',')
+  ];
+  return [
+    'Template Import Transaksi KelolaRacun',
+    '',
+    `Pouch tersedia: ${pouchNames || '-'}`,
+    `Kategori tersedia: ${catNames || '-'}`,
+    '',
+    'ATURAN:',
+    '- Date: YYYY-MM-DD (contoh: 2026-03-15).',
+    '- Amount: angka positif, tanpa Rp atau titik ribuan.',
+    '- Cashflow (Source of fund): isi nama pouch. Kosongkan untuk memakai Pouch Cadangan.',
+    '- Kategori: nama kategori; kosongkan untuk auto-tag otomatis.',
+    '',
+    rows.join('\n')
+  ].join('\n');
+}
+
+function downloadCsvTemplate() {
+  downloadText(`template-bulk-${new Date().toISOString().slice(0, 10)}.csv`, buildTemplateCsv(), 'text/csv;charset=utf-8');
+  showToast('Template CSV diunduh', 'success');
+}
+
+function downloadXlsxTemplate() {
+  if (!window.XLSX) {
+    showToast('Library Excel belum termuat. Muat ulang halaman.', 'danger');
+    return;
+  }
+  const pouchNames = pouchList.map(p => p.name).join(' / ');
+  const catNames = categoryList.map(c => c.name).join(' / ');
+  const workbook = window.XLSX.utils.book_new();
+  const sheet = window.XLSX.utils.aoa_to_sheet([
+    ['Template Import Transaksi KelolaRacun'],
+    [''],
+    [`Pouch tersedia: ${pouchNames || '-'}`],
+    [`Kategori tersedia: ${catNames || '-'}`],
+    [''],
+    ['ATURAN:'],
+    ['- Date: YYYY-MM-DD (contoh: 2026-03-15).'],
+    ['- Amount: angka positif, tanpa Rp atau titik ribuan.'],
+    ['- Cashflow (Source of fund): isi nama pouch. Kosongkan untuk memakai Pouch Cadangan.'],
+    ['- Kategori: nama kategori; kosongkan untuk auto-tag otomatis.'],
+    [''],
+    TEMPLATE_HEADERS,
+    ['2026-03-15', 'Belanja Bulanan', 150000, 'Kas Utama', 'Makanan'],
+    ['2026-03-16', 'Gaji Transfer', 5000000, 'BCA', 'Gaji'],
+    ['2026-03-17', 'Langganan Internet', 300000, '', 'Utilitas']
+  ]);
+  window.XLSX.utils.book_append_sheet(workbook, sheet, 'Template');
+  window.XLSX.writeFile(workbook, `template-bulk-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast('Template Excel diunduh', 'success');
+}
+
+function parseCsvToMatrix(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') {
+        cell += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        cell += c;
+      }
+    } else {
+      if (c === '"') {
+        inQuotes = true;
+      } else if (c === ',') {
+        row.push(cell.trim());
+        cell = '';
+      } else if (c === '\r') {
+        // ignore
+      } else if (c === '\n') {
+        row.push(cell.trim());
+        rows.push(row);
+        row = [];
+        cell = '';
+      } else {
+        cell += c;
+      }
+    }
+  }
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell.trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
 function handlePickedFile(file) {
   if (!file) return;
   if (file.size > MAX_FILE) {
@@ -111,30 +254,48 @@ function handlePickedFile(file) {
     if (inp) inp.value = '';
     return;
   }
+  if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+    showToast('Format file harus CSV atau Excel (.xlsx / .xls)', 'danger');
+    return;
+  }
   showToast('File dipilih: ' + file.name, 'info');
   const fn = document.getElementById('fileName');
   if (fn) fn.textContent = file.name;
-  showOcrWrap(file.name);
-
-  if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
-    handlePdfFile(file);
-    return;
-  }
-  setOcrStatus('');
-
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    parseCSV(evt.target.result);
-  };
-  reader.onerror = function() {
-    loadSamplePreview();
-  };
 
   if (/\.csv$/i.test(file.name)) {
-    reader.readAsText(file);
-  } else {
-    loadSamplePreview();
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const matrix = parseCsvToMatrix(evt.target.result);
+      parseTemplateRows(matrix, file.name);
+    };
+    reader.onerror = function() {
+      showToast('File gagal dibaca', 'danger');
+    };
+    reader.readAsText(file, 'utf-8');
+    return;
   }
+
+  if (!window.XLSX) {
+    showToast('Library Excel belum termuat. Muat ulang halaman.', 'danger');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const workbook = window.XLSX.read(evt.target.result, { type: 'array', cellDates: true });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) throw new Error('File tidak berisi sheet');
+      const rows = window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+      parseTemplateRows(rows, file.name);
+    } catch (err) {
+      console.warn('Excel parse gagal:', err);
+      showToast('Excel gagal dibaca: ' + err.message, 'danger');
+    }
+  };
+  reader.onerror = function() {
+    showToast('File gagal dibaca', 'danger');
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 window.handleFileSelect = function(e) {
@@ -173,66 +334,45 @@ function bindDropzone() {
   });
 }
 
-async function handlePdfFile(file) {
-  try {
-    if (!window.pdfjsLib) throw new Error('PDF.js belum termuat (offline?)');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const buf = await file.arrayBuffer();
-    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
-    const pages = Math.min(pdf.numPages, 30);
-    const pagesItems = [];
-    let textChars = 0;
-    for (let p = 1; p <= pages; p++) {
-      setOcrStatus(`Baca halaman ${p}/${pages}...`, Math.round((p / pages) * 60));
-      const page = await pdf.getPage(p);
-      const tc = await page.getTextContent();
-      const items = tc.items.map((it) => ({
-        text: it.str,
-        x: it.transform[4],
-        y: it.transform[5]
-      })).filter((it) => Boolean(it.text && it.text.trim()));
-      textChars += items.map((i) => i.text).join('').length;
-      pagesItems.push({ pageNum: p, items });
-    }
-    const year = new Date().getFullYear();
-    let result = { rows: [], skipped: 0 };
-    if (textChars >= 200) {
-      result = parsePdfItemsToRows(pagesItems, year);
-    }
-    if (!result.rows.length) {
-      const ocrPages = await ocrPdf(pdf, pages);
-      result = parseOcrWordsToRows(ocrPages, year);
-    }
-    if (!result.rows.length) throw new Error('Tidak ada transaksi di kolom Keluar/Masuk');
-    setOcrStatus('Menyiapkan reconcile...', 95);
-    await stageRows(result.rows, file.name, result.skipped);
-    hideOcrWrap();
-  } catch (err) {
-    console.warn('PDF parse gagal:', err);
-    setOcrStatus('Gagal: ' + err.message, 0);
-    showToast('PDF gagal dibaca: ' + err.message, 'danger');
+function findHeaderIndex(headers, aliases) {
+  const lower = headers.map(h => normalize(h).toLowerCase());
+  for (const alias of aliases) {
+    const idx = lower.findIndex(h => h === alias.toLowerCase());
+    if (idx >= 0) return idx;
   }
+  return -1;
 }
 
-async function ocrPdf(pdf, pages) {
-  if (!window.Tesseract) throw new Error('OCR belum termuat (butuh internet)');
-  const pagesWords = [];
-  for (let p = 1; p <= pages; p++) {
-    setOcrStatus(`OCR halaman ${p}/${pages}...`, 60 + Math.round((p / pages) * 35));
-    const page = await pdf.getPage(p);
-    const vp = page.getViewport({ scale: 2 });
-    const canvas = document.createElement('canvas');
-    canvas.width = vp.width; canvas.height = vp.height;
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-    const { data } = await window.Tesseract.recognize(canvas, 'ind+eng');
-    const words = (data.words || []).map((w) => ({
-      text: w.text,
-      x: w.bbox ? (w.bbox.x0 + w.bbox.x1) / 2 : 0,
-      y: w.bbox ? vp.height - (w.bbox.y0 + w.bbox.y1) / 2 : 0
-    })).filter((w) => Boolean(w.text && w.text.trim()));
-    pagesWords.push({ pageNum: p, words });
+function findTemplateHeader(rows) {
+  const aliases = {
+    date: ['date', 'tanggal', 'tgl'],
+    desc: ['deskripsi transaksi', 'deskripsi', 'keterangan', 'description', 'desc'],
+    amount: ['amount', 'nominal', 'jumlah', 'nilai'],
+    pouch: ['cashflow (source of fund)', 'cashflow', 'source of fund', 'pouch', 'dompet'],
+    category: ['kategori', 'category', 'kategori transaksi']
+  };
+  for (let r = 0; r < Math.min(rows.length, 20); r++) {
+    const row = rows[r] || [];
+    const idx = {
+      date: findHeaderIndex(row, aliases.date),
+      desc: findHeaderIndex(row, aliases.desc),
+      amount: findHeaderIndex(row, aliases.amount),
+      pouch: findHeaderIndex(row, aliases.pouch),
+      category: findHeaderIndex(row, aliases.category)
+    };
+    if (idx.date >= 0 && idx.desc >= 0 && idx.amount >= 0) return { row: r, ...idx };
   }
-  return pagesWords;
+  return null;
+}
+
+function markDuplicates(staged, existingTxs) {
+  const hashes = new Set((existingTxs || []).map(t => rowHash({
+    date: parseDate(t.date),
+    desc: t.notes || t.desc || '',
+    amount: Number(t.amount) || 0,
+    type: t.type || (Number(t.amount) >= 0 ? 'Income' : 'Expense')
+  })));
+  return staged.map(r => ({ ...r, dup: hashes.has(r.hash) }));
 }
 
 async function stageRows(raw, fileName, skippedCount = 0) {
@@ -257,39 +397,45 @@ async function stageRows(raw, fileName, skippedCount = 0) {
   showToast(`${importedRows.length} baris dari ${fileName || 'file'} siap reconcile${skipMsg}`, 'success');
 }
 
-async function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim().length > 0);
-  const rows = [];
-  const startIdx = lines[0].toLowerCase().includes('date') || lines[0].toLowerCase().includes('tanggal') ? 1 : 0;
-  for (let i = startIdx; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-    if (cols.length >= 3) {
-      const date = cols[0] || new Date().toISOString().split('T')[0];
-      const desc = cols[1] || 'Imported Transaction';
-      const rawAmt = Number(cols[2].replace(/[^0-9.-]+/g, '')) || 0;
-      const type = rawAmt >= 0 ? 'Income' : 'Expense';
-      const amount = Math.abs(rawAmt);
-      const providedCat = cols[3] || '';
-      const tagged = autoTag(desc);
-      const category = providedCat || tagged.category;
-      rows.push({ date, desc, amount, type, category, hash: rowHash({ date, desc, amount, type }) });
+async function parseTemplateRows(rows, fileName) {
+  try { if (!categoryList.length) categoryList = await getCategories(); } catch {}
+  const header = findTemplateHeader(rows);
+  if (!header) {
+    showToast('Header template tidak dikenali. Gunakan template resmi.', 'danger');
+    return;
+  }
+  const rawRows = [];
+  const skipped = [];
+  for (let i = header.row + 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const date = parseDate(row[header.date]);
+    const desc = normalize(row[header.desc]);
+    const amount = parseAmount(row[header.amount]);
+    const pouchName = normalize(row[header.pouch]);
+    const category = normalize(row[header.category]);
+    if (!date || !desc || !amount) {
+      skipped.push(i + 1);
+      continue;
     }
+    const targetCat = category || autoTag(desc).category;
+    let type = 'Expense';
+    const foundCat = (categoryList || []).find(c => c.name.toLowerCase() === targetCat.toLowerCase());
+    if (foundCat && foundCat.type) {
+      type = foundCat.type;
+    } else if (/gaji|salary|pendapatan|income|transfer masuk|terima|dividen|bonus/i.test(desc) || /gaji|investasi/i.test(targetCat)) {
+      type = 'Income';
+    }
+    const rawAmount = Math.abs(amount);
+    rawRows.push({ date, desc, amount: rawAmount, type, category: targetCat, pouchName, hash: rowHash({ date, desc, amount: rawAmount, type }) });
   }
-  if (!rows.length) {
-    loadSamplePreview();
-  } else {
-    await stageRows(rows, 'CSV');
+  if (!rawRows.length) {
+    showToast('Tidak ada baris transaksi valid. Cek format Date, Deskripsi, dan Amount.', 'warning');
+    return;
   }
-}
-
-async function loadSamplePreview() {
-  const sample = [
-    { date: '2026-03-01', desc: 'Salary Transfer', amount: 5000000, type: 'Income', category: 'Gaji' },
-    { date: '2026-03-02', desc: 'Grocery Store', amount: 450000, type: 'Expense', category: 'Makanan' },
-    { date: '2026-03-03', desc: 'Fuel Station', amount: 120000, type: 'Expense', category: 'Transport' },
-    { date: '2026-03-04', desc: 'Dividend Payout', amount: 150000, type: 'Income', category: 'Investasi' }
-  ].map((r) => ({ ...r, hash: rowHash(r) }));
-  await stageRows(sample, 'Sample');
+  await stageRows(rawRows, fileName, skipped.length);
+  if (skipped.length) {
+    showToast(`${skipped.length} baris dilewati karena data wajib kosong atau invalid`, 'warning');
+  }
 }
 
 function visibleRows() {
@@ -340,6 +486,7 @@ function renderCards() {
             <span class="reconcile-card__date">${dStr}</span>
             <span class="badge badge--gold text-xs">${escapeHtml(r.category || 'Umum')}</span>
             <span class="badge badge--${isInc ? 'success' : 'danger'} text-xs">${isInc ? 'Masuk' : 'Keluar'}</span>
+            <span class="badge badge--info text-xs">${escapeHtml(r.pouchName || 'Pouch Cadangan')}</span>
             ${r.dup ? '<span class="badge badge--warning text-xs">Duplikat</span>' : ''}
           </div>
         </div>
@@ -369,6 +516,13 @@ function renderCards() {
         <div>
           <label>Kategori</label>
           <select class="modal__select text-sm" data-field="category" data-idx="${i}">${catOpts}</select>
+        </div>
+        <div>
+          <label>Cashflow (Source of fund)</label>
+          <select class="modal__select text-sm" data-field="pouchName" data-idx="${i}">
+            <option value="" ${!r.pouchName ? 'selected' : ''}>Pouch Cadangan</option>
+            ${pouchList.map(p => `<option value="${escapeHtml(p.name)}" ${p.name === r.pouchName ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
         </div>
       </div>` : ''}
     </li>`;
@@ -436,11 +590,6 @@ function applyRowField(i, field, val) {
 
 window.updateRowField = applyRowField;
 
-function updateRowLive(i) {
-  renderCards();
-  recalcSummary();
-}
-
 window.toggleCheckAll = function(checked) {
   const vis = visibleRows();
   vis.forEach(({ r }) => { if (!hideDup || !r.dup) r.checked = !!checked; });
@@ -491,7 +640,8 @@ window.confirmImport = async function() {
       return;
     }
     const picked = document.getElementById('importPouchId')?.value;
-    const targetPouchId = (picked && pouches.some((p) => p.id === picked)) ? picked : pouches[0].id;
+    const fallbackPouch = (picked && pouches.some((p) => p.id === picked)) ? picked : pouches[0].id;
+    const pouchByName = new Map(pouches.map(p => [p.name, p.id]));
 
     let income = 0, expense = 0;
     const overCats = new Set();
@@ -513,6 +663,7 @@ window.confirmImport = async function() {
           }
         } catch {}
       }
+      const targetPouchId = r.pouchName ? (pouchByName.get(r.pouchName) || fallbackPouch) : fallbackPouch;
       await addTransaction({
         pouchId: targetPouchId,
         type: r.type,
@@ -528,19 +679,19 @@ window.confirmImport = async function() {
     }
     const fileName = document.getElementById('fileName')?.textContent || 'Import';
     try {
-      await logImport({ fileName, count: toImport.length, income, expense, pouchId: targetPouchId });
+      await logImport({ fileName, count: toImport.length, income, expense, pouchId: fallbackPouch });
     } catch (err) {
       console.warn('Log import gagal:', err);
     }
 
-    const targetName = (await getPouches()).find((p) => p.id === targetPouchId)?.name || 'Pouch';
+    const targetName = (await getPouches()).find((p) => p.id === fallbackPouch)?.name || 'Pouch';
     const sumEl = document.getElementById('doneSummary');
-    if (sumEl) sumEl.textContent = `${toImport.length} transaksi berhasil dimasukkan ke pouch ${targetName}. (+${formatRupiah(income)} / -${formatRupiah(expense)})`;
+    if (sumEl) sumEl.textContent = `${toImport.length} transaksi berhasil dimasukkan. Fallback: pouch ${targetName}. (+${formatRupiah(income)} / -${formatRupiah(expense)})`;
     gotoStep(3);
     importedRows = [];
     expandedIdx = -1;
     await renderImportHistory();
-    showToast(`${toImport.length} transaksi berhasil diimport ke ${targetName}! 🎉`, 'success');
+    showToast(`${toImport.length} transaksi berhasil diimport! 🎉`, 'success');
   } catch (err) {
     showToast('Gagal import: ' + err.message, 'danger');
   }
@@ -649,9 +800,12 @@ function bindReconcileEvents() {
     const ok = await syncSessionRole();
     if (!ok) return;
   } catch {}
+  document.getElementById('btnDownloadXlsx')?.addEventListener('click', downloadXlsxTemplate);
+  document.getElementById('btnDownloadCsv')?.addEventListener('click', downloadCsvTemplate);
   bindDropzone();
   bindReconcileEvents();
   gotoStep(1);
+  try { categoryList = await getCategories(); } catch {}
   await initBanner();
   await renderImportHistory();
   try {

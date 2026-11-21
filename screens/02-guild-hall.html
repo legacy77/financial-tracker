@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
   <title>Guild Hall — Family Finance Hub</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
@@ -32,6 +33,7 @@
         <a href="02-guild-hall.html" aria-current="page">Hall</a>
         <a href="03-inventory.html">Inventory</a>
         <a href="04-scroll-reading.html">Import</a>
+        <a href="05-summary.html">Summary</a>
       </nav>
       <div class="flex items-center gap-2 banner-actions">
         <div class="card p-2 flex items-center gap-2 pill">
@@ -42,7 +44,6 @@
           <span>⚡</span>
           <span id="xpDisplay" class="font-bold xp-num">Lv.1</span>
         </div>
-        <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema">🌙</button>
         <button class="btn btn--secondary theme-toggle" id="btnSettings" data-open-modal="settingsModal" aria-label="Pengaturan" title="Pengaturan">⚙️</button>
         <button class="btn btn--ghost theme-toggle" data-logout aria-label="Keluar" title="Keluar">🚪</button>
       </div>
@@ -58,6 +59,13 @@
         </div>
         <a href="../index.html" class="btn btn--secondary btn--sm">🏠 Home Harian</a>
       </div>
+      <section class="card hall-daily mb-6" aria-label="Catat transaksi">
+        <div><h3>Catat transaksi</h3><p class="text-secondary text-sm">Perbarui pemasukan dan pengeluaran keluarga.</p></div>
+        <div class="hall-daily__actions">
+          <button class="btn btn--primary" data-open-modal="txModal" data-type="Expense">Catat Pengeluaran</button>
+          <button class="btn btn--secondary" data-open-modal="txModal" data-type="Income">Catat Pemasukan</button>
+        </div>
+      </section>
       <div class="hall-grid">
 
       <div>
@@ -172,12 +180,13 @@
             <button class="btn btn--ghost btn--sm" id="budgetPrevMonth" aria-label="Bulan sebelumnya">←</button>
             <span class="badge badge--info" id="budgetMonthLabel">Bulan ini</span>
             <button class="btn btn--ghost btn--sm" id="budgetNextMonth" aria-label="Bulan berikutnya">→</button>
+            <button class="btn btn--secondary btn--sm" id="budgetAiSuggest">🤖 Saran AI</button>
           </div>
         </div>
         <p class="text-tertiary text-sm mb-4">Batas belanja per kategori pengeluaran. Atur lewat 🏷️ Kelola Kategori.</p>
         <div class="mb-4">
           <div class="flex justify-between mb-1">
-            <span class="font-semibold text-sm">Total budget</span>
+            <span class="font-semibold text-sm">Budget dialokasikan</span>
             <span class="text-sm" id="budgetTotalTxt">-</span>
           </div>
           <div class="bar-track bar-track--sm">
@@ -234,12 +243,9 @@
       <div>
       <!-- Quick Actions -->
       <div class="card p-4 mb-6">
-        <h3 class="mb-3">Aksi Cepat</h3>
+        <h3 class="mb-3">Kelola</h3>
         <div class="quick-actions">
-          <button class="btn btn--primary" data-open-modal="txModal" data-type="Income">➕ Tambah Loot</button>
-          <button class="btn btn--danger" data-open-modal="txModal" data-type="Expense">💸 Catat Pengeluaran</button>
-          <button class="btn btn--secondary" data-open-modal="pouchModal">🏛️ Tambah Pouch</button>
-          <button class="btn btn--ghost" data-open-modal="billModal">📜 Tambah Tagihan</button>
+          <button class="btn btn--secondary" data-open-modal="pouchModal">Tambah Dompet</button>
           <button class="btn btn--ghost" data-open-modal="catModal">🏷️ Kelola Kategori</button>
           <button class="btn btn--ghost member-manage-btn" id="btnManageMembers" title="Tambah atau kelola anggota keluarga (hanya Admin)">👥 Kelola Anggota</button>
           <button id="btnExportPdf" class="btn btn--ghost">📄 Export Laporan (PDF)</button>
@@ -261,9 +267,10 @@
       <!-- Bills Archive -->
       <div class="card">
         <div class="flex items-center justify-between p-4 card-head">
-          <h3>Semua Tagihan Pending</h3>
+          <div><h3>Tagihan belum lunas</h3><p id="billsOutstanding" class="font-semibold text-sm" aria-live="polite"></p></div>
           <span class="badge badge--warning bills-count">-</span>
         </div>
+        <div class="p-4"><button class="btn btn--secondary" data-open-modal="billModal">Tambah Tagihan</button></div>
         <div class="list p-4 bills-list">
           <p class="text-tertiary text-sm p-4">Memuat tagihan...</p>
         </div>
@@ -281,6 +288,10 @@
     <a href="02-guild-hall.html" class="bottom-nav__item bottom-nav__item--active">
       <span class="bottom-nav__icon">🏰</span>
       <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="05-summary.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📊</span>
+      <span class="bottom-nav__label">SUMMARY</span>
     </a>
     <a href="03-inventory.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🎒</span>
@@ -301,7 +312,7 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="txModalTitle">➕ Tambah Loot (Pemasukan)</h3>
+        <h3 class="modal__title" id="txModalTitle"><span class="modal__emoji" aria-hidden="true">➕</span> Tambah Loot (Pemasukan)</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="txModalForm" class="modal__body">
@@ -316,11 +327,12 @@
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="txAmount">Nominal (IDR)</label>
-          <input type="number" id="txAmount" name="amount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="100000" required>
+          <input type="number" id="txAmount" name="amount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="100000" required aria-describedby="txAmount-hint">
+          <p class="modal__hint" id="txAmount-hint">Angka tanpa titik. Contoh: 100000</p>
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="txNotes">Catatan (opsional)</label>
-          <input type="text" id="txNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat">
+          <input type="text" id="txNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat" maxlength="120">
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="txDate">Tanggal</label>
@@ -338,13 +350,13 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="pouchModalTitle">🏛️ Tambah Pouch Baru</h3>
+        <h3 class="modal__title" id="pouchModalTitle"><span class="modal__emoji" aria-hidden="true">🏛️</span> Tambah Pouch Baru</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="pouchModalForm" class="modal__body">
         <div class="modal__form-group">
           <label class="modal__label" for="pouchName">Nama Pouch</label>
-          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required>
+          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required maxlength="60">
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="pouchType">Tipe</label>
@@ -357,7 +369,8 @@
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="pouchBalance">Saldo Awal (IDR)</label>
-          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="0">
+          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="0" aria-describedby="pouchBalance-hint">
+          <p class="modal__hint" id="pouchBalance-hint">Angka tanpa titik. Contoh: 100000</p>
         </div>
         <div class="modal__footer">
           <button type="button" class="btn btn--ghost modal__close">Batal</button>
@@ -371,17 +384,18 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="billModalTitle">📜 Tambah Tagihan</h3>
+        <h3 class="modal__title" id="billModalTitle"><span class="modal__emoji" aria-hidden="true">📜</span> Tambah Tagihan</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="billModalForm" class="modal__body">
         <div class="modal__form-group">
           <label class="modal__label" for="billTitle">Judul Tagihan</label>
-          <input type="text" id="billTitle" name="billTitle" class="modal__input" placeholder="Contoh: Sewa Rumah, Listrik, Internet" required>
+          <input type="text" id="billTitle" name="billTitle" class="modal__input" placeholder="Contoh: Sewa Rumah, Listrik, Internet" required maxlength="80">
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="billAmount">Nominal (IDR)</label>
-          <input type="number" id="billAmount" name="billAmount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="2500000" required>
+          <input type="number" id="billAmount" name="billAmount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="2500000" required aria-describedby="billAmount-hint">
+          <p class="modal__hint" id="billAmount-hint">Angka tanpa titik. Contoh: 2500000</p>
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="billCategory">Kategori</label>
@@ -404,7 +418,7 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="payBillModalTitle">💸 Bayar Tagihan</h3>
+        <h3 class="modal__title" id="payBillModalTitle"><span class="modal__emoji" aria-hidden="true">💸</span> Bayar Tagihan</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="payBillForm" class="modal__body">
@@ -420,13 +434,14 @@
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="payBillAmount">Jumlah Bayar (IDR)</label>
-          <input type="number" id="payBillAmount" name="payBillAmount" class="modal__input" min="1" step="1" inputmode="numeric" required>
+          <input type="number" id="payBillAmount" name="payBillAmount" class="modal__input" min="1" step="1" inputmode="numeric" required aria-describedby="payBillAmount-hint">
+          <p class="modal__hint" id="payBillAmount-hint">Jumlah yang dibayar</p>
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="payBillDate">Tanggal Bayar</label>
           <input type="date" id="payBillDate" name="payBillDate" class="modal__input">
         </div>
-        <p class="text-tertiary text-xs mb-4" id="payBillWarn"></p>
+        <p class="modal__error mb-4" id="payBillWarn"></p>
         <div class="modal__footer">
           <button type="button" class="btn btn--ghost modal__close">Batal</button>
           <button type="submit" class="btn btn--primary" id="payBillSubmit">Bayar</button>
@@ -440,17 +455,19 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="questModalTitle">🎯 Atur Monthly Quest</h3>
+        <h3 class="modal__title" id="questModalTitle"><span class="modal__emoji" aria-hidden="true">🎯</span> Atur Monthly Quest</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="questModalForm" class="modal__body">
         <div class="modal__form-group">
           <label class="modal__label" for="questIncome">Target Pendapatan / Bulan (IDR)</label>
-          <input type="number" id="questIncome" name="questIncome" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="5000000" required>
+          <input type="number" id="questIncome" name="questIncome" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="5000000" required aria-describedby="questIncome-hint">
+          <p class="modal__hint" id="questIncome-hint">Angka tanpa titik. Contoh: 5000000</p>
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="questExpense">Batas Pengeluaran / Bulan (IDR)</label>
-          <input type="number" id="questExpense" name="questExpense" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="3000000" required>
+          <input type="number" id="questExpense" name="questExpense" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="3000000" required aria-describedby="questExpense-hint">
+          <p class="modal__hint" id="questExpense-hint">Angka tanpa titik. Contoh: 3000000</p>
         </div>
         <div class="modal__footer">
           <button type="button" class="btn btn--ghost modal__close">Batal</button>
@@ -465,33 +482,42 @@
     <div class="modal__backdrop"></div>
       <div class="modal__content">
         <div class="modal__header">
-          <h3 class="modal__title" id="catModalTitle">🏷️ Custom Kategori</h3>
+          <h3 class="modal__title" id="catModalTitle"><span class="modal__emoji" aria-hidden="true">🏷️</span> Custom Kategori</h3>
           <button class="modal__close" aria-label="Tutup">&times;</button>
         </div>
         <div class="modal__body">
           <form id="catForm" class="mb-4 modal-grid">
-          <div class="modal__form-group">
-            <label class="modal__label" for="catName">Nama</label>
-            <input type="text" id="catName" name="catName" class="modal__input" placeholder="Skincare" required>
-          </div>
-          <div class="modal__form-group">
-            <label class="modal__label" for="catIcon">Icon</label>
-            <input type="text" id="catIcon" name="catIcon" class="modal__input" placeholder="🧴">
-          </div>
-          <div class="modal__form-group">
-            <label class="modal__label" for="catType">Tipe</label>
-            <select id="catType" name="catType" class="modal__select">
-              <option value="Expense">Pengeluaran</option>
-              <option value="Income">Pemasukan</option>
-            </select>
-          </div>
-          <div class="modal__form-group" id="catBudgetWrap">
-            <label class="modal__label" for="catBudget">Budget Bulanan (IDR, opsional)</label>
-            <input type="number" id="catBudget" name="catBudget" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="cth: 1000000">
-          </div>
-          <button type="submit" class="btn btn--primary">+</button>
-        </form>
-        <div id="catList" class="scroll-box"></div>
+            <div class="modal__form-group">
+              <label class="modal__label" for="catName">Nama kategori</label>
+              <input type="text" id="catName" name="catName" class="modal__input" placeholder="Contoh: Belanja bulanan" required maxlength="40" aria-describedby="catName-hint">
+              <p class="modal__hint" id="catName-hint">Nama yang mudah dikenali.</p>
+            </div>
+            <div class="modal__form-group">
+              <label class="modal__label" for="catType">Tipe transaksi</label>
+              <select id="catType" name="catType" class="modal__select" aria-describedby="catType-hint">
+                <option value="Expense">Pengeluaran</option>
+                <option value="Income">Pemasukan</option>
+              </select>
+              <p class="modal__hint" id="catType-hint">Menentukan kategori pemasukan atau pengeluaran.</p>
+            </div>
+            <div class="modal__form-group">
+              <label class="modal__label" for="catIcon">Emoji kategori (opsional)</label>
+              <input type="text" id="catIcon" name="catIcon" class="modal__input" placeholder="🧴" aria-describedby="catIcon-hint">
+              <p class="modal__hint" id="catIcon-hint">Boleh dikosongkan.</p>
+            </div>
+            <div class="modal__form-group" id="catBudgetWrap">
+              <label class="modal__label" for="catBudget">Budget pengeluaran bulanan (IDR)</label>
+              <input type="number" id="catBudget" name="catBudget" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="cth: 1000000" aria-describedby="catBudget-hint catBudget-format">
+              <p class="modal__hint" id="catBudget-hint">Opsional. Kosongkan bila tidak ada target.</p>
+              <p class="modal__hint" id="catBudget-format">Masukkan angka tanpa titik.</p>
+            </div>
+            <div class="modal__footer">
+              <button type="button" class="btn btn--ghost modal__close">Batal</button>
+              <button type="submit" class="btn btn--primary">Simpan</button>
+            </div>
+          </form>
+          <h4 class="modal__label" id="catListTitle">Kategori tersimpan</h4>
+          <div id="catList" class="scroll-box" aria-labelledby="catListTitle"></div>
       </div>
     </div>
   </div>
@@ -501,7 +527,7 @@
     <div class="modal__backdrop"></div>
       <div class="modal__content">
         <div class="modal__header">
-          <h3 class="modal__title" id="achModalTitle">🏅 Gallery Achievement</h3>
+          <h3 class="modal__title" id="achModalTitle"><span class="modal__emoji" aria-hidden="true">🏅</span> Gallery Achievement</h3>
           <button class="modal__close" aria-label="Tutup">&times;</button>
         </div>
         <div class="modal__body">
@@ -511,38 +537,17 @@
     </div>
   </div>
 
-  <!-- Member Management Modal -->
-  <div class="modal" id="memberModal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
-    <div class="modal__backdrop"></div>
-      <div class="modal__content">
-        <div class="modal__header">
-          <h3 class="modal__title" id="memberModalTitle">👥 Kelola Anggota</h3>
-          <button class="modal__close" aria-label="Tutup">&times;</button>
-        </div>
-        <div class="modal__body">
-          <form id="memberForm" class="mb-4 modal-grid">
-          <div class="modal__form-group">
-            <label class="modal__label" for="memName">Nama</label>
-            <input type="text" id="memName" name="memName" class="modal__input" placeholder="Nama anggota" required maxlength="30">
-          </div>
-          <div class="modal__form-group">
-            <label class="modal__label" for="memRole">Role</label>
-            <select id="memRole" name="memRole" class="modal__select">
-              <option value="Co-Manager">Co-Manager</option>
-              <option value="Viewer">Viewer</option>
-            </select>
-          </div>
-          <div class="modal__form-group">
-            <label class="modal__label" for="memPin">PIN 6 Digit</label>
-            <input type="password" id="memPin" name="memPin" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-          </div>
-          <div class="modal__form-group">
-            <label class="modal__label" for="memPin2">Ulangi PIN</label>
-            <input type="password" id="memPin2" name="memPin2" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-          </div>
-          <button type="submit" class="btn btn--primary">+</button>
-        </form>
-        <div id="memberListManaged" class="scroll-box"></div>
+  <div class="modal" id="budgetAiModal" role="dialog" aria-modal="true" aria-labelledby="budgetAiModalTitle" aria-describedby="budgetAiDescription">
+    <div class="modal__backdrop" data-close-modal="budgetAiModal"></div>
+    <div class="modal__content budget-ai">
+      <div class="modal__header"><h3 class="modal__title" id="budgetAiModalTitle"><span class="modal__emoji" aria-hidden="true">💡</span> Saran budget AI</h3><button type="button" class="modal__close" data-close-modal="budgetAiModal" aria-label="Tutup saran budget AI">✕</button></div>
+      <div class="modal__body">
+        <p class="budget-ai__intro" id="budgetAiDescription">Tinjau budget bulanan berdasarkan pola pengeluaranmu. Pilih saran yang sesuai; budget tidak berubah sebelum kamu menerapkannya.</p>
+        <div id="budgetAiList" class="budget-ai__list" aria-live="polite" aria-atomic="true"></div>
+      </div>
+      <div class="modal__footer budget-ai__footer">
+        <p id="budgetAiStatus" role="status"></p>
+        <button type="button" class="btn btn--primary" id="budgetAiApplyAll" disabled>Terapkan semua saran</button>
       </div>
     </div>
   </div>
@@ -552,7 +557,7 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="backupModalTitle">💾 Backup & Restore</h3>
+        <h3 class="modal__title" id="backupModalTitle"><span class="modal__emoji" aria-hidden="true">💾</span> Backup & Restore</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <div class="modal__body">
@@ -561,8 +566,8 @@
           <button id="btnBackupDownload" class="btn btn--primary w-full">
             📥 Download Backup JSON
           </button>
-          <label class="btn btn--secondary">
-            📤 Restore dari File
+          <label class="btn btn--secondary" for="backupFileInput">
+            Pilih file backup (.json)
             <input type="file" id="backupFileInput" accept=".json" class="sr-only" onchange="window.handleBackupRestore(event)">
           </label>
           <hr class="divider">
@@ -580,7 +585,7 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="settingsModalTitle">⚙️ Pengaturan</h3>
+        <h3 class="modal__title" id="settingsModalTitle"><span class="modal__emoji" aria-hidden="true">⚙️</span> Pengaturan</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <div class="modal__body">
@@ -616,11 +621,13 @@
           <form id="settingsQuestForm">
             <div class="modal__form-group">
               <label class="modal__label" for="setQuestIncome">Target Pendapatan / Bulan (IDR)</label>
-              <input type="number" id="setQuestIncome" name="questIncome" class="modal__input" min="1" step="1" inputmode="numeric" required>
+              <input type="number" id="setQuestIncome" name="questIncome" class="modal__input" min="1" step="1" inputmode="numeric" required aria-describedby="setQuestIncome-hint">
+              <p class="modal__hint" id="setQuestIncome-hint">Angka tanpa titik. Contoh: 5000000</p>
             </div>
             <div class="modal__form-group">
               <label class="modal__label" for="setQuestExpense">Batas Pengeluaran / Bulan (IDR)</label>
-              <input type="number" id="setQuestExpense" name="questExpense" class="modal__input" min="1" step="1" inputmode="numeric" required>
+              <input type="number" id="setQuestExpense" name="questExpense" class="modal__input" min="1" step="1" inputmode="numeric" required aria-describedby="setQuestExpense-hint">
+              <p class="modal__hint" id="setQuestExpense-hint">Angka tanpa titik. Contoh: 3000000</p>
             </div>
             <div class="modal__footer">
               <button type="submit" class="btn btn--primary">Simpan Target</button>
@@ -640,15 +647,7 @@
                 <option value="Viewer">Viewer</option>
               </select>
             </div>
-            <div class="modal__form-group">
-              <label class="modal__label" for="setMemPin">PIN 6 Digit</label>
-              <input type="password" id="setMemPin" name="memPin" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-            </div>
-            <div class="modal__form-group">
-              <label class="modal__label" for="setMemPin2">Ulangi PIN</label>
-              <input type="password" id="setMemPin2" name="memPin2" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-            </div>
-            <button type="submit" class="btn btn--primary">+</button>
+            <button type="submit" class="btn btn--primary">Simpan</button>
           </form>
           <div id="settingsMemberList" class="scroll-box"></div>
         </div>
@@ -663,23 +662,6 @@
               <button type="submit" class="btn btn--primary">Simpan Nama</button>
             </div>
           </form>
-          <form id="profilePinForm">
-            <div class="modal__form-group">
-              <label class="modal__label" for="profileOldPin">PIN Lama</label>
-              <input type="password" id="profileOldPin" name="oldPin" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-            </div>
-            <div class="modal__form-group">
-              <label class="modal__label" for="profileNewPin">PIN Baru</label>
-              <input type="password" id="profileNewPin" name="newPin" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-            </div>
-            <div class="modal__form-group">
-              <label class="modal__label" for="profileNewPin2">Ulangi PIN Baru</label>
-              <input type="password" id="profileNewPin2" name="newPin2" class="modal__input" placeholder="••••••" minlength="6" maxlength="6" inputmode="numeric" pattern="\d{6}" required>
-            </div>
-            <div class="modal__footer">
-              <button type="submit" class="btn btn--primary">Ganti PIN</button>
-            </div>
-          </form>
         </div>
         <div class="settings-pane" id="pane-general" role="tabpanel">
           <div class="modal__form-group">
@@ -687,7 +669,6 @@
             <select id="prefTheme" class="modal__select">
               <option value="system">Ikuti Sistem</option>
               <option value="light">Terang</option>
-              <option value="dark">Gelap</option>
             </select>
           </div>
           <div class="modal__form-group">
@@ -702,12 +683,28 @@
               <option value="off">Nonaktif</option>
             </select>
           </div>
+          <div class="modal__form-group">
+            <label class="modal__label" for="prefSimple">Bahasa Sederhana</label>
+            <select id="prefSimple" class="modal__select">
+              <option value="on">Aktif (Loot / Dompet / Tagihan)</option>
+              <option value="off">Nonaktif (RPG)</option>
+            </select>
+          </div>
+          <div class="modal__form-group">
+            <label class="modal__label" for="prefQuiet">Mode Tenang</label>
+            <select id="prefQuiet" class="modal__select">
+              <option value="off">Nonaktif (XP/achievement aktif)</option>
+              <option value="on">Aktif (sembunyikan XP/streak)</option>
+            </select>
+          </div>
           <div id="settingsBackupSection">
             <hr class="divider">
+            <p class="text-tertiary text-xs mb-2">Data hanya tersimpan di perangkat ini. Backup rutin agar tidak hilang saat ganti HP.</p>
             <div class="stack-col">
               <button id="setBtnBackupDownload" class="btn btn--secondary w-full">📥 Download Backup JSON</button>
-              <label class="btn btn--secondary">
-                📤 Restore dari File
+              <button id="setBtnBackupWA" class="btn btn--secondary w-full">📲 Kirim Backup via WA</button>
+              <label class="btn btn--secondary" for="setBackupFileInput">
+                File backup (.json)
                 <input type="file" id="setBackupFileInput" accept=".json" class="sr-only">
               </label>
               <button id="setBtnResetAll" class="btn btn--danger w-full">🗑️ Reset Semua Data</button>

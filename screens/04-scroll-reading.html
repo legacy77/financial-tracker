@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
   <title>Import — Family Finance Hub</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
@@ -10,9 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <!-- ponytail: CDN dulu (pdf.js 3.11, tesseract 5.1); vendor lokal saat stabil offline. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+  <script src="../vendor/xlsx.mini.min.js"></script>
 </head>
 <body>
   <header class="guild-banner" role="banner">
@@ -32,13 +31,13 @@
         <a href="02-guild-hall.html">Hall</a>
         <a href="03-inventory.html">Inventory</a>
         <a href="04-scroll-reading.html" aria-current="page">Import</a>
+        <a href="05-summary.html">Summary</a>
       </nav>
       <div class="flex items-center gap-2 banner-actions">
         <div class="card p-2 flex items-center gap-2 pill">
           <span>💰</span>
           <span class="guild-banner__gold font-bold text-sm">Memuat...</span>
         </div>
-        <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema">🌙</button>
         <button class="btn btn--ghost theme-toggle" data-logout aria-label="Keluar" title="Keluar">🚪</button>
       </div>
     </div>
@@ -47,7 +46,7 @@
   <main class="container page-shell import-shell">
     <div class="mb-6">
       <h2 class="mb-1">Import Transaksi</h2>
-      <p class="text-tertiary">Upload statement bank, cek datanya, masukkan sekaligus ke pouch.</p>
+      <p class="text-tertiary">Unduh template, isi transaksi, lalu upload untuk bulk insert ke pouch.</p>
     </div>
 
     <ol class="stepper" id="stepper" aria-label="Langkah import">
@@ -66,44 +65,59 @@
     </ol>
 
     <section id="step1" class="step-pane" aria-label="Langkah 1: Upload">
+      <!-- Card Template Download -->
       <div class="card p-6 mb-6">
-        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Unggah file statement">
-          <div class="dropzone__icon">📄</div>
-          <h3 class="mb-1">Tarik file ke sini atau ketuk untuk pilih</h3>
-          <p class="text-tertiary text-sm mb-4">Statement SeaBank (PDF), CSV, atau Excel — maks 10MB</p>
-          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf" class="sr-only">
-          <span class="btn btn--primary">📂 Pilih File</span>
-          <div class="flex gap-2 justify-center mt-4 flex-wrap">
-            <span class="badge badge--info">PDF SeaBank</span>
-            <span class="badge">CSV</span>
-            <span class="badge">XLSX</span>
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <h3 class="mb-1">📋 Template Bulk Insert</h3>
+            <p class="text-tertiary text-sm">Gunakan template resmi agar data tanggal, nominal, pouch, dan kategori langsung terpetakan.</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button type="button" class="btn btn--secondary btn--sm" id="btnDownloadXlsx">📊 Unduh Excel (.xlsx)</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="btnDownloadCsv">📄 Unduh CSV (.csv)</button>
           </div>
         </div>
-        <div id="ocrWrap" class="is-hidden mt-4" aria-live="polite">
-          <div class="flex justify-between mb-1">
-            <span class="text-sm font-semibold" id="ocrFileName">-</span>
-            <span class="text-sm text-tertiary" id="ocrStatus">Menyiapkan...</span>
-          </div>
-          <div class="bar-track bar-track--sm"><div id="ocrBar" class="bar-fill--income" style="width: 0%;"></div></div>
-          <div id="ocrStatusLegacy" class="sr-only"></div>
+
+        <div class="p-3 bg-surface-2 rounded text-xs text-secondary mt-2">
+          <strong>Format 5 Kolom Template:</strong>
+          <span class="badge badge--info ml-1">Date</span>
+          <span class="badge badge--gold ml-1">Deskripsi Transaksi</span>
+          <span class="badge badge--success ml-1">Amount</span>
+          <span class="badge ml-1">Cashflow (Source of fund)</span>
+          <span class="badge ml-1">Kategori</span>
         </div>
       </div>
 
       <div class="card p-6 mb-6">
-        <h3 class="mb-1">Tujuan import</h3>
-        <p class="text-tertiary text-sm mb-4">Semua transaksi terpilih masuk ke pouch ini.</p>
-        <label class="modal__label" for="importPouchId">Masuk ke Pouch</label>
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Unggah file template">
+          <div class="dropzone__icon">📂</div>
+          <h3 class="mb-1">Tarik file ke sini atau ketuk untuk pilih</h3>
+          <p class="text-tertiary text-sm mb-4">File Excel (.xlsx, .xls) atau CSV — maks 10MB</p>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="sr-only">
+          <span class="btn btn--primary">📂 Pilih File</span>
+          <div class="flex gap-2 justify-center mt-4 flex-wrap">
+            <span class="badge badge--success">Excel (.xlsx / .xls)</span>
+            <span class="badge badge--info">CSV (.csv)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-6 mb-6">
+        <h3 class="mb-1">Pouch Cadangan (Default Fallback)</h3>
+        <p class="text-tertiary text-sm mb-4">Digunakan otomatis jika baris di file tidak mengisi nama pouch atau salah ketik.</p>
+        <label class="modal__label" for="importPouchId">Default Pouch</label>
         <select id="importPouchId" class="modal__select"></select>
       </div>
 
       <details class="card p-6 mb-6">
-        <summary class="font-semibold text-sm">Cara export statement SeaBank</summary>
+        <summary class="font-semibold text-sm">💡 Panduan Pengisian Kolom Template</summary>
         <ol class="text-sm text-secondary mt-3 import-help">
-          <li>Buka aplikasi SeaBank → mutasi rekening.</li>
-          <li>Export / simpan sebagai PDF atau CSV.</li>
-          <li>Upload file di sini, lalu cek hasilnya di langkah Reconcile.</li>
+          <li><strong>Date:</strong> Format tanggal <code>YYYY-MM-DD</code> (contoh: <code>2026-03-15</code>) atau format standar Excel.</li>
+          <li><strong>Deskripsi Transaksi:</strong> Keterangan pembelian / penerimaan dana.</li>
+          <li><strong>Amount:</strong> Nominal transaksi dalam angka positif (misal: <code>50000</code>).</li>
+          <li><strong>Cashflow (Source of fund):</strong> Nama Pouch asal dana (misal: <code>Kas Utama</code>, <code>BCA</code>, dsb). Jika dikosongkan, masuk ke Pouch Cadangan.</li>
+          <li><strong>Kategori:</strong> Nama kategori pengeluaran atau pemasukan (misal: <code>Makanan</code>, <code>Gaji</code>). Jika kosong, sistem otomatis mengenali kata kunci deskripsi.</li>
         </ol>
-        <p class="text-tertiary text-xs mt-2">Kolom yang dibaca: tanggal, keterangan, keluar, masuk. Kolom saldo akhir diabaikan.</p>
       </details>
 
       <div class="card p-6">
@@ -205,6 +219,10 @@
     <a href="02-guild-hall.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🏰</span>
       <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="05-summary.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📊</span>
+      <span class="bottom-nav__label">SUMMARY</span>
     </a>
     <a href="03-inventory.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🎒</span>

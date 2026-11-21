@@ -5,7 +5,7 @@
 
 import { add, getAll, getById, put, remove } from '../db.js';
 import { publish } from '../core/eventBus.js';
-import { onBillPaid, onBillAdded } from '../core/gamification.js';
+import { onBillPaid, onBillAdded, onBillVoided } from '../core/gamification.js';
 import { addTransaction, deleteTransaction } from './transactionService.js';
 import { getPouch } from './pouchService.js';
 
@@ -80,7 +80,7 @@ export async function payBill(billId, { pouchId, amount, date, category } = {}) 
       ...bill,
       paidAmount: newPaid,
       status: newPaid >= total ? 'Paid' : 'Partial',
-      paidAt: new Date().toISOString(),
+      paidAt: tx.date || new Date().toISOString(),
       paidPouchId: pouchId,
       txIds: [...(bill.txIds || []), tx.id]
     };
@@ -97,8 +97,22 @@ export async function payBill(billId, { pouchId, amount, date, category } = {}) 
 export async function voidBillPayment(billId) {
   const bill = await getById(STORE, billId);
   if (!bill) throw new Error('Tagihan tidak ditemukan');
+  // Hanya tagihan yang sudah pernah dibayar yang pernah menaikkan billsPaid
+  const everPaid = (Number(bill.paidAmount) || 0) > 0;
+  // billsPaid naik sekali per transaksi pembayaran, jadi void menurunkan sebanyak tx terhapus
+  let removed = 0;
   for (const txId of bill.txIds || []) {
-    try { await deleteTransaction(txId, { skipBillGuard: true }); } catch {}
+    try {
+      await deleteTransaction(txId, { skipBillGuard: true });
+      removed += 1;
+    } catch (err) {
+      console.warn(`Void tagihan: gagal menghapus transaksi ${txId}:`, err);
+    }
+  }
+  if (everPaid) {
+    for (let i = 0; i < removed; i++) {
+      try { await onBillVoided(); } catch (err) { console.warn('Gamification update gagal:', err); }
+    }
   }
   const reset = {
     ...bill,

@@ -77,8 +77,8 @@ Buka → initApp (seed) → fetchAll (guild, pouches, tx, bills)
      → Aksi: modal tambah tx/pouch/bill/kategori, achievement, print, backup
      → Link balik "Home Harian" untuk aksi cepat hari ini
      → ⚙️ Settings (5 tab): Guild (nama/avatar/moto) · Quest (target) ·
-        Anggota (tambah/role/aktif/PIN/hapus + guard Admin terakhir) ·
-        Profil Saya (nama + PIN via verify) · Umum (tema/notif/pouch default/backup)
+        Anggota (profil bawaan terkunci; anggota lain: tambah/role/aktif/hapus dengan guard Admin terakhir) ·
+        Profil Saya (ubah nama) · Umum (tema/notif/pouch default/backup)
      → RBAC hide total: non-Admin hanya lihat Profil + Umum (tanpa backup);
         tab/pane Guild/Quest/Members + section backup hidden via atribut + guard submit
 ```

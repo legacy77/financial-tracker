@@ -71,6 +71,7 @@ export async function resetAllData() {
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
-  try { await pushToServer(); } catch {}
+  const result = await pushToServer();
+  if (!result.synced) throw new Error(result.reason || 'Reset lokal selesai, tetapi belum tersinkron ke server.');
   return true;
 }

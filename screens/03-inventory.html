@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1020">
   <title>Inventory — Family Finance Hub</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
   <link rel="stylesheet" href="../styles/modern-theme.css">
@@ -30,13 +31,13 @@
         <a href="02-guild-hall.html">Hall</a>
         <a href="03-inventory.html" aria-current="page">Inventory</a>
         <a href="04-scroll-reading.html">Import</a>
+        <a href="05-summary.html">Summary</a>
       </nav>
       <div class="flex items-center gap-2 banner-actions">
         <div class="card p-2 flex items-center gap-2 pill">
           <span>💰</span>
           <span class="guild-banner__gold font-bold text-sm">Memuat...</span>
         </div>
-        <button class="btn btn--secondary theme-toggle" id="themeToggle" aria-label="Ganti tema">🌙</button>
         <button class="btn btn--ghost theme-toggle" data-logout aria-label="Keluar" title="Keluar">🚪</button>
       </div>
     </div>
@@ -71,18 +72,19 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="pouchModalTitle">🏛️ Tambah Pouch Baru</h3>
+        <h3 class="modal__title" id="pouchModalTitle"><span class="modal__emoji" aria-hidden="true">🏛️</span> Tambah Pouch Baru</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="pouchModalForm" class="modal__body">
         <div class="modal__form-group">
           <label class="modal__label" for="pouchName">Nama Pouch</label>
-          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required>
+          <input type="text" id="pouchName" name="pouchName" class="modal__input" placeholder="Contoh: Gold Pouch, Bank BCA" required maxlength="60">
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="pouchType">Tipe</label>
           <select id="pouchType" name="pouchType" class="modal__select" required>
             <option value="Cash">💰 Cash</option>
+            <option value="Savings">🎯 Savings</option>
             <option value="Bank">🏦 Bank</option>
             <option value="Investment">🔮 Investasi</option>
             <option value="E-Wallet">📱 E-Wallet</option>
@@ -90,7 +92,8 @@
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="pouchBalance">Saldo Awal (IDR)</label>
-          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="0">
+          <input type="number" id="pouchBalance" name="pouchBalance" class="modal__input" min="0" step="1" inputmode="numeric" placeholder="0" aria-describedby="pouchBalance-hint">
+          <p class="modal__hint" id="pouchBalance-hint">Angka tanpa titik. Contoh: 100000</p>
         </div>
         <div class="modal__footer">
           <button type="button" class="btn btn--ghost modal__close">Batal</button>
@@ -100,11 +103,24 @@
     </div>
   </div>
 
+  <div class="modal" id="goalModal" role="dialog" aria-modal="true" aria-labelledby="goalTitle">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__header"><h3 class="modal__title" id="goalTitle"><span class="modal__emoji" aria-hidden="true">🎯</span> Goal Savings</h3><button class="modal__close" aria-label="Tutup">&times;</button></div>
+      <form id="goalForm" class="modal__body">
+        <div class="modal__form-group"><label class="modal__label" for="goalTarget">Target (IDR)</label><input type="number" id="goalTarget" name="goalTarget" class="modal__input" min="1" required aria-describedby="goalTarget-hint">
+          <p class="modal__hint" id="goalTarget-hint">Angka tanpa titik. Contoh: 1000000</p></div>
+        <div class="modal__form-group"><label class="modal__label" for="goalDeadline">Deadline</label><input type="date" id="goalDeadline" name="goalDeadline" class="modal__input" required></div>
+        <div class="modal__footer"><button type="button" class="btn btn--ghost modal__close">Batal</button><button type="submit" class="btn btn--primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="txModal" role="dialog" aria-modal="true" aria-labelledby="invTxTitle">
     <div class="modal__backdrop"></div>
     <div class="modal__content">
       <div class="modal__header">
-        <h3 class="modal__title" id="invTxTitle">➕ Tambah Transaksi</h3>
+        <h3 class="modal__title" id="invTxTitle"><span class="modal__emoji" aria-hidden="true">➕</span> Tambah Transaksi</h3>
         <button class="modal__close" aria-label="Tutup">&times;</button>
       </div>
       <form id="invTxForm" class="modal__body">
@@ -130,11 +146,12 @@
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="invTxAmount">Nominal (IDR)</label>
-          <input type="number" id="invTxAmount" name="amount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="100000" required>
+          <input type="number" id="invTxAmount" name="amount" class="modal__input" min="1" step="1" inputmode="numeric" placeholder="100000" required aria-describedby="invTxAmount-hint">
+          <p class="modal__hint" id="invTxAmount-hint">Angka tanpa titik. Contoh: 100000</p>
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="invTxNotes">Catatan (opsional)</label>
-          <input type="text" id="invTxNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat">
+          <input type="text" id="invTxNotes" name="notes" class="modal__input" placeholder="Deskripsi singkat" maxlength="120">
         </div>
         <div class="modal__form-group">
           <label class="modal__label" for="invTxDate">Tanggal</label>
@@ -157,6 +174,10 @@
     <a href="02-guild-hall.html" class="bottom-nav__item">
       <span class="bottom-nav__icon">🏰</span>
       <span class="bottom-nav__label">HALL</span>
+    </a>
+    <a href="05-summary.html" class="bottom-nav__item">
+      <span class="bottom-nav__icon">📊</span>
+      <span class="bottom-nav__label">SUMMARY</span>
     </a>
     <a href="03-inventory.html" class="bottom-nav__item bottom-nav__item--active">
       <span class="bottom-nav__icon">🎒</span>

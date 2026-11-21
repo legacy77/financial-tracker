@@ -21,7 +21,7 @@ function monthlyExpenseAverage(transactions, months = 6) {
     let sum = 0;
     transactions.forEach(t => {
       const td = new Date(t.date);
-      if (td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth() && (t.type === 'Expense' || t.type === 'Transfer')) {
+      if (td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth() && t.type === 'Expense') {
         sum += t.amount;
       }
     });
@@ -79,6 +79,33 @@ export async function computeHealthScore({ guild, transactions, pouches, bills }
     emergencyFundMonths: Math.round(emergencyFundMonths * 10) / 10,
     debtRatio: Math.round(debtRatio),
     budgetDiscipline: Math.round(budgetDisciplineClamped),
-    monthIncome, monthExpense
+    monthIncome, monthExpense,
+    narrative: buildNarrative({
+      overall, savingsRatio, emergencyFundMonths, debtRatio, budgetDisciplineClamped,
+      monthIncome, monthExpense, totalBalance, totalBills, avgMonthly, expenseTarget
+    })
   };
+}
+
+function buildNarrative({ overall, savingsRatio, emergencyFundMonths, debtRatio, budgetDiscipline, monthIncome, monthExpense, totalBalance, totalBills, avgMonthly, expenseTarget }) {
+  if (overall >= 75) return 'Kondisi keuangan 🟢 sangat sehat. Pertahankan tabungan & investasikan kelebihan.';
+  if (overall >= 50) {
+    if (savingsRatio < 20) return `💡 Sisihkan sebagian pendapatan (${formatCompact(monthIncome)}) untuk tabungan agar rasio tabungan naik >30%.`;
+    if (emergencyFundMonths < 3) return `🛡️ Dana darurat kurang (${formatCompact(totalBalance)}). Butuh ${formatCompact((avgMonthly * 6) - totalBalance)} lagi untuk 6 bulan.`;
+    if (budgetDiscipline < 60) return `🎯 Pengeluaran (${formatCompact(monthExpense)}) melebihi target (${formatCompact(expenseTarget)}). Kurangi variabel seperti hiburan/belanja.`;
+    return '🟡 Kondisi cukup sehat. Sedikit perbaiki tabungan/dana darurat.';
+  }
+  const parts = [];
+  if (savingsRatio < 15) parts.push(`tabungan rendah (rasio ${Math.round(savingsRatio)}% < 30%)`);
+  if (emergencyFundMonths < 2) parts.push(`dana darurat hampir habis (${Math.round(emergencyFundMonths)} bulan)`);
+  if (debtRatio > 50) parts.push(`utang tinggi (${Math.round(debtRatio)}%)`);
+  if (budgetDiscipline < 40) parts.push(`budget melebihi target`);
+  return '🔴 ' + parts.join(', ') + '. Segera kaitkan kami untuk rencana aksi.';
+}
+
+function formatCompact(n) {
+  if (n >= 1000000000) return (n / 1000000000).toFixed(1) + 'M';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'jt';
+  if (n >= 1000) return Math.round(n / 1000) + 'rb';
+  return String(n);
 }

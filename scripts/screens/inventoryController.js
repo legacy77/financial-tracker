@@ -6,16 +6,18 @@
 import { initApp, showToast } from '../app.js';
 import { getGuild, updateGuild } from '../services/guildService.js';
 import { getState } from '../core/gamification.js';
-import { getPouches, createPouch, getPouch } from '../services/pouchService.js';
+import { getPouches, createPouch, getPouch, setSavingsGoal, getSavingsProgress } from '../services/pouchService.js';
 import { getTransactionsByPouch, addTransaction } from '../services/transactionService.js';
 import { getCategories } from '../services/categoryService.js';
 import { canEdit } from '../core/authService.js';
 import { subscribe, publish } from '../core/eventBus.js';
 import {
-  formatRupiah, relativeDate, validateTransactionForm,
+  formatRupiah, formatDate, relativeDate, validateTransactionForm,
   openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
 } from '../core/helpers.js';
 import { requireAuth, syncSessionRole } from '../core/authService.js';
+import { categorizeTransaction } from '../services/aiCategorizer.js';
+import { predictGoalAchievability } from '../services/savingsPredictor.js';
 
 let activePouchId = null;
 
@@ -143,9 +145,13 @@ function renderPouchDetail(pouch, transactions) {
         <p class="text-2xl font-bold text-income">${formatRupiah(pouch.balance)} IDR</p>
       </div>
       <div class="flex gap-2 items-center">
-        <button class="btn btn--primary" data-open-modal="txModal" data-pouch="${pouch.id}">➕ Tambah Transaksi</button>
+        ${pouch.type === 'Savings' ? `<button class="btn btn--secondary" data-open-modal="goalModal">🎯 Atur goal</button><button class="btn btn--primary" data-open-modal="txModal" data-pouch="${pouch.id}">➕ Kontribusi</button>` : `<button class="btn btn--primary" data-open-modal="txModal" data-pouch="${pouch.id}">➕ Tambah Transaksi</button>`}
       </div>
     </div>
+    ${pouch.type === 'Savings' && pouch.target ? (() => {
+      const goal = getSavingsProgress(pouch);
+      return `<div class="card p-4 mb-4"><div class="flex items-center justify-between"><strong>🎯 Goal tabungan</strong><span>${Math.round(goal.progress * 100)}%</span></div><p class="text-sm text-tertiary">Tersisa ${formatRupiah(goal.remaining)} · Per bulan ${formatRupiah(goal.monthlyContribution)}</p><p class="text-sm ${goal.overdue ? 'text-expense' : 'text-tertiary'}">${goal.overdue ? 'Deadline terlewat' : `Deadline ${formatDate(pouch.deadline)}`}</p></div>`;
+    })() : ''}
 
     <div class="divider"></div>
 
@@ -186,6 +192,20 @@ function renderPouchDetail(pouch, transactions) {
   });
 }
 
+function suggestInventoryCategory() {
+  try {
+    const form = document.getElementById('invTxForm');
+    const category = document.getElementById('invTxCategory');
+    if (!form || !category || category.dataset.manual === 'true') return;
+    const result = categorizeTransaction(form.elements.namedItem('notes')?.value || '', form.elements.namedItem('amount')?.value || 0, form.elements.namedItem('type')?.value || 'Expense', cachedInvCats);
+    if (result.categoryId && result.confidence > 0.7 && result.categoryName && [...category.options].some((o) => o.value === result.categoryName)) {
+      category.value = result.categoryName;
+      category.dataset.aiSuggested = 'true';
+      category.title = '🤖 AI suggestion — dapat diubah manual';
+    }
+  } catch (err) { console.warn('AI category suggestion gagal:', err); }
+}
+
 function syncTransferWrap() {
   const typeSel = document.getElementById('invTxType');
   const wrap = document.getElementById('invToPouchWrap');
@@ -196,6 +216,12 @@ function syncTransferWrap() {
 }
 
 function setupForms(pouches) {
+  const aiCategory = document.getElementById('invTxCategory');
+  if (aiCategory && !aiCategory.dataset.manualBound) {
+    aiCategory.dataset.manualBound = 'true';
+    aiCategory.addEventListener('change', () => { aiCategory.dataset.manual = 'true'; delete aiCategory.dataset.aiSuggested; aiCategory.title = ''; });
+    document.getElementById('invTxForm')?.addEventListener('reset', () => { delete aiCategory.dataset.manual; delete aiCategory.dataset.aiSuggested; aiCategory.title = ''; });
+  }
   const opts = pouches.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${formatRupiah(p.balance)})</option>`).join('');
   const pouchSelect = document.getElementById('invPouchId');
   if (pouchSelect) {
@@ -212,6 +238,11 @@ function setupForms(pouches) {
   const txForm = document.getElementById('invTxForm');
   if (txForm && !txForm.dataset.bound) {
     txForm.dataset.bound = 'true';
+    const category = document.getElementById('invTxCategory');
+    if (category) {
+      ['input', 'blur'].forEach((eventName) => category.addEventListener(eventName, suggestInventoryCategory));
+      category.setAttribute('aria-label', 'Kategori transaksi 🤖 AI');
+    }
     txForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const amount = parseAmount(txForm.elements.namedItem('amount').value);
@@ -257,6 +288,38 @@ function setupForms(pouches) {
         showToast('Transaksi berhasil ditambahkan!', 'success');
         closeModal('txModal');
         txForm.reset();
+      } catch (err) {
+        showToast('Gagal: ' + err.message, 'danger');
+      }
+    });
+  }
+
+  const goalForm = document.getElementById('goalForm');
+  if (goalForm && !goalForm.dataset.bound) {
+    goalForm.dataset.bound = 'true';
+    goalForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const goal = {
+          target: goalForm.elements.namedItem('goalTarget').value,
+          deadline: goalForm.elements.namedItem('goalDeadline').value
+        };
+        await setSavingsGoal(activePouchId, goal);
+        try {
+          const transactions = await getTransactionsByPouch(activePouchId);
+          const pouches = await getPouches();
+          const prediction = predictGoalAchievability({ ...goal, balance: (await getPouch(activePouchId))?.balance || 0 }, transactions, pouches);
+          let result = document.getElementById('goalAiPrediction');
+          if (!result) { result = document.createElement('div'); result.id = 'goalAiPrediction'; result.className = 'ai-suggestion'; goalForm.after(result); }
+          const money = (value) => formatRupiah(Math.round(value || 0));
+          result.innerHTML = `<strong>🤖 AI Prediction: ${prediction.achievable ? 'achievable' : 'not achievable'}</strong><br>Projected completion: ${prediction.projectedDate || 'belum tersedia'}<br>Suggested monthly contribution: ${money(prediction.suggestedMonthly)}<br><small>Optimistic: ${money(prediction.scenarios.optimistic)} · Realistic: ${money(prediction.scenarios.realistic)} · Pessimistic: ${money(prediction.scenarios.pessimistic)}</small>${prediction.achievable ? '' : `<br><span class="text-warning">${escapeHtml(prediction.reasoning)}</span>`}`;
+          result.hidden = false;
+        } catch (err) {
+          console.warn('Prediksi goal AI gagal:', err);
+          showToast('Goal tersimpan, prediksi AI tidak tersedia', 'warning');
+        }
+        closeModal('goalModal');
+        showToast('Goal tabungan disimpan', 'success');
       } catch (err) {
         showToast('Gagal: ' + err.message, 'danger');
       }

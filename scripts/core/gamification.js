@@ -232,11 +232,26 @@ export async function onTransactionAdded(type) {
   return addXP(type === 'Income' ? 'ADD_INCOME' : 'ADD_EXPENSE');
 }
 
+export async function onTransactionDeleted() {
+  const state = await getState();
+  state.totalTransactions = Math.max(0, (state.totalTransactions || 0) - 1);
+  await saveState(state);
+  return state;
+}
+
 export async function onBillPaid() {
   const state = await getState();
   state.billsPaid += 1;
   await saveState(state);
   return addXP('PAY_BILL');
+}
+
+// Penghitung mundur saat tagihan di-void; guard anti-negatif
+export async function onBillVoided() {
+  const state = await getState();
+  state.billsPaid = Math.max(0, (state.billsPaid || 0) - 1);
+  await saveState(state);
+  return state;
 }
 
 export async function onBillAdded() {

@@ -10,23 +10,39 @@ import { getTransactions, addTransaction, deleteTransaction } from '../services/
 import { getBills, addBill, deleteBill, voidBillPayment } from '../services/billService.js';
 import { openPayBillModal, setupPayBillForm } from '../core/payBill.js';
 import { getCategories, createCategory, deleteCategory } from '../services/categoryService.js';
-import { getBudgets, setBudget, setBudgetBase, deleteBudget, monthKey, monthSpending, copyMonth, applyCarry, shiftMonth, getMonthView, pruneOrphans } from '../services/budgetService.js';
+import { getBudgets, setBudgetBase, deleteBudget, monthKey, monthSpending, copyMonth, applyCarry, shiftMonth, getMonthView, pruneOrphans } from '../services/budgetService.js';
+import { generateBudgetSuggestions } from '../services/budgetAdvisor.js';
 
 import { subscribe } from '../core/eventBus.js';
 import {
   formatRupiah, relativeDate, validateTransactionForm,
-  openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META
+  openModal, closeModal, setupModalClose, escapeHtml, TYPE_META, POUCH_TYPE_META,
+  setSimpleOn
 } from '../core/helpers.js';
 import {
   getState, getLevelInfo, getAchievements
 } from '../core/gamification.js';
 import { exportBackup, downloadBackup, restoreBackup, resetAllData } from '../core/backupService.js';
 import { computeHealthScore } from '../core/healthScore.js';
-import { requireAuth, syncSessionRole, requireAdmin, requireMember, getCurrentMember, getCurrentRole, canEdit, canManageGuild, canManageCategories, canManageMembers, canBackup } from '../core/authService.js';
-import { getMembersByGuild, getMember, createMember, updateMember, deleteMember } from '../services/memberService.js';
-import { hashPin, verifyPin, generateSalt } from '../core/crypto.js';
+import { requireAuth, syncSessionRole, requireAdmin, requireMember, getCurrentMember, canEdit, canManageGuild, canManageCategories, canManageMembers, canBackup } from '../core/authService.js';
+import { isAllowedMemberId, getMembersByGuild, getMember, createMember, updateMember, deleteMember } from '../services/memberService.js';
 
 let chartInstances = {};
+
+// ---- Auto-backup mingguan ----
+function scheduleAutoBackup() {
+  try {
+    const last = localStorage.getItem('ffh-backup-last');
+    if (last && Date.now() - Number(last) < 7 * 86400000) return;
+    window.setTimeout(async () => {
+      try {
+        const data = await exportBackup();
+        localStorage.setItem('ffh-backup-latest', JSON.stringify(data));
+        localStorage.setItem('ffh-backup-last', String(Date.now()));
+      } catch {}
+    }, 5000);
+  } catch {}
+}
 
 // ---- Init & Data Fetch ----
 async function fetchAll() {
@@ -95,6 +111,8 @@ function renderGamification(state) {
 function renderHealthScore(health) {
   const scoreEl = document.getElementById('hsScore');
   const badgeEl = document.getElementById('hsBadge');
+  const adviceEl = document.getElementById('hsAdvice') || createHealthAdvice();
+  if (adviceEl) adviceEl.textContent = health.narrative || '';
   const els = {
     hsSavings: health.savingsRatio + '%',
     hsEmergency: health.emergencyFundMonths + ' Bulan',
@@ -113,6 +131,16 @@ function renderHealthScore(health) {
     badgeEl.textContent = `${health.status.icon} ${health.status.label}`;
     badgeEl.className = `badge badge--${health.status.badge}`;
   }
+}
+
+function createHealthAdvice() {
+  const card = document.querySelector('.metric-grid')?.parentElement;
+  if (!card) return null;
+  const p = document.createElement('p');
+  p.id = 'hsAdvice';
+  p.className = 'text-sm mt-4 p-3 card';
+  card.appendChild(p);
+  return p;
 }
 
 function renderMonthlyQuest(guild, { monthIncome, monthExpense }) {
@@ -172,7 +200,7 @@ function renderRecentTransactions(transactions) {
         <div class="list__meta flex-col items-end gap-1">
           <span class="list__amount ${meta.cls} font-bold">${sign}${amt}</span>
           <span class="list__date">${relativeDate(t.date)}</span>
-          <button class="btn btn--ghost btn--danger-text tx-delete" data-tx="${t.id}">✕ Hapus</button>
+          <button class="btn btn--ghost btn--danger-text tx-delete" data-tx="${escapeHtml(t.id)}">✕ Hapus</button>
         </div>
       </div>`;
   }).join('');
@@ -193,7 +221,13 @@ function renderRecentTransactions(transactions) {
 function renderBills(bills) {
   const container = document.querySelector('.list.bills-list');
   if (!container) return;
-  const pending = (bills || []).filter((b) => b.status === 'Pending' || b.status === 'Partial');
+  const today = new Date();
+  const dayNumber = d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+  const pending = (bills || []).filter(b => b.status === 'Pending' || b.status === 'Partial')
+    .map(b => { const due = new Date(b.dueDate); const validDue = Number.isFinite(due.getTime()); return { ...b, daysLeft: validDue ? dayNumber(due) - dayNumber(today) : Infinity, dateInvalid: !validDue }; })
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+  const outstanding = document.getElementById('billsOutstanding');
+  if (outstanding) outstanding.textContent = `Sisa kewajiban ${formatRupiah(pending.reduce((sum, b) => sum + Math.max(0, Number(b.amount) - (Number(b.paidAmount) || 0)), 0))}`;
 
   if (!pending.length) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state__icon">📜</div><p class="font-semibold">Tidak ada tagihan pending</p><p class="text-sm text-tertiary">Guild bebas beban — mantap!</p></div>';
@@ -207,35 +241,36 @@ function renderBills(bills) {
     badge.textContent = `${pending.length} tagihan`;
   }
 
+  let previousGroup = '';
   container.innerHTML = pending.map(b => {
-    const due = new Date(b.dueDate);
-    const daysLeft = Math.ceil((due - new Date()) / 86400000);
-    let dueText = daysLeft <= 0 ? 'Jatuh tempo hari ini!' : `Jatuh tempo ${daysLeft} hari`;
-    let dueCls = '';
-    if (daysLeft <= 3 && daysLeft >= 0) {
-      dueText = `⚠️ ${dueText}`;
-      dueCls = ' bill-due--soon';
-    }
+    const daysLeft = b.daysLeft;
+    const group = daysLeft < 0 ? 'Terlambat' : daysLeft <= 7 ? 'Jatuh tempo maksimal 7 hari' : 'Berikutnya';
+    const heading = previousGroup !== group ? `<h4 class="hall-bill-group">${group}</h4>` : '';
+    previousGroup = group;
+    const date = b.dateInvalid ? 'Tanggal tidak tersedia' : new Date(b.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const dueText = `${date} · ${daysLeft < 0 ? `terlambat ${Math.abs(daysLeft)} hari` : daysLeft === 0 ? 'jatuh tempo hari ini!' : `jatuh tempo ${daysLeft} hari lagi`}`;
+    const dueCls = daysLeft <= 7 ? ' bill-due--soon' : '';
     const paid = Number(b.paidAmount) || 0;
     const total = Number(b.amount) || 0;
-    const remaining = total - paid;
+    const remaining = Math.max(0, total - paid);
     const partialLine = b.status === 'Partial'
       ? `<div class="text-xs text-tertiary">Terbayar ${formatRupiah(paid)} / ${formatRupiah(total)}</div>
          <div class="bar-track bar-track--sm mt-1"><div class="bar-fill--income" style="width: ${total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0}%;"></div></div>`
       : `<div class="text-xs text-tertiary">${escapeHtml(b.category || '')}</div>`;
     return `
-      <div class="list__item">
+      ${heading}<div class="list__item hall-bill">
         <div class="list__icon">🧾</div>
         <div class="list__content">
           <div class="list__title">${escapeHtml(b.title)}</div>
           <div class="list__subtitle${dueCls}">${dueText}</div>
-          ${partialLine}
+          ${partialLine}<div class="text-sm text-secondary">Total ${formatRupiah(total)} ? Terbayar ${formatRupiah(paid)}</div>
         </div>
         <div class="list__meta flex-col items-end gap-1">
           <span class="list__amount list__amount--danger font-bold">${formatRupiah(remaining)}</span>
-          <button class="btn btn--ghost btn--xs pill-bill-paid" data-bill="${b.id}">💸 Bayar</button>
-          ${(b.txIds || []).length ? `<button class="btn btn--ghost btn--sm-text bill-void" data-bill="${b.id}">↩ Batal lunas</button>` : ''}
-          <button class="btn btn--ghost btn--danger-text bill-delete" data-bill="${b.id}">✕ Hapus</button>
+          <button class="btn btn--primary pill-bill-paid" data-bill="${escapeHtml(b.id)}">💸 Bayar</button>
+          <details class="hall-tools"><summary aria-label="Aksi lain untuk ${escapeHtml(b.title)}">Aksi lain</summary>
+          ${(b.txIds || []).length ? `<button class="btn btn--ghost btn--sm-text bill-void" data-bill="${escapeHtml(b.id)}">↩ Batal lunas</button>` : ''}
+          <button class="btn btn--ghost btn--danger-text bill-delete" data-bill="${escapeHtml(b.id)}">✕ Hapus</button></details>
         </div>
       </div>`;
   }).join('');
@@ -316,9 +351,15 @@ function renderCharts(transactions) {
 
   const cashflowEl = document.getElementById('cashflowChart');
   const expenseEl = document.getElementById('expenseChart');
-  const isDark = document.documentElement.classList.contains('dark');
-  const gridColor = 'rgba(128, 128, 128, 0.2)';
-  const textColor = isDark ? '#d0d0d0' : '#5d5d5d';
+  const cssColor = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const gridColor = cssColor('--chart-grid', 'rgba(255,255,255,.14)');
+  const textColor = cssColor('--color-text-primary', '#fff6d5');
+  const incomeColor = cssColor('--color-income-500', '#5eead4');
+  const expenseColor = cssColor('--color-expense-500', '#ff9b9f');
+  const goldColor = cssColor('--color-gold-500', '#ffcc66');
+  const blueColor = cssColor('--color-blue-500', '#65d9ff');
+  Chart.defaults.color = textColor;
+  Chart.defaults.borderColor = gridColor;
 
   if (cashflowEl) {
     if (chartInstances.cashflow) chartInstances.cashflow.destroy();
@@ -331,15 +372,15 @@ function renderCharts(transactions) {
           {
             label: 'Pemasukan',
             data: months.map(m => m.income),
-            borderColor: '#14b8a6',
-            backgroundColor: 'rgba(20, 184, 166, 0.15)',
+            borderColor: incomeColor,
+            backgroundColor: incomeColor,
             fill: true, tension: 0.3, borderWidth: 2
           },
           {
             label: 'Pengeluaran',
             data: months.map(m => m.expense),
-            borderColor: '#e11d48',
-            backgroundColor: 'rgba(225, 29, 72, 0.12)',
+            borderColor: expenseColor,
+            backgroundColor: expenseColor,
             fill: true, tension: 0.3, borderWidth: 2
           }
         ]
@@ -361,7 +402,7 @@ function renderCharts(transactions) {
   if (expenseEl) {
     if (chartInstances.expense) chartInstances.expense.destroy();
     const expenses = aggregateExpenses(transactions);
-    const palette = ['#e11d48', '#f59e0b', '#9333ea', '#14b8a6', '#2563eb', '#8c8c8c'];
+    const palette = [expenseColor, goldColor, blueColor, incomeColor, textColor, gridColor];
     chartInstances.expense = new Chart(expenseEl, {
       type: 'doughnut',
       data: {
@@ -401,13 +442,21 @@ async function renderAchievements() {
 }
 
 function notifyAchievements(achievements) {
+  if (isQuiet()) return;
   achievements.forEach(a => {
     showToast(`${a.icon} Achievement Terbuka: ${a.name}!`, 'success');
   });
 }
 
 function notifyLevelUp(level) {
+  if (isQuiet()) return;
   showToast(`🎉 Guild naik ke Level ${level}!`, 'warning');
+}
+
+function isQuiet() {
+  try {
+    return JSON.parse(localStorage.getItem('ffh-prefs') || '{}').quiet === 'on';
+  } catch { return false; }
 }
 
 // ---- Print & Backup ----
@@ -496,12 +545,14 @@ async function renderBudgetCard(transactions) {
   renderBudgetMonthLabel();
   const month = budgetMonth;
   const [cats, view] = await Promise.all([getCategories(), getMonthView(month, transactions)]);
+  const finite = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
   const rows = (view || [])
     .map((b) => {
       const cat = cats.find((c) => c.id === b.categoryId) || { id: b.categoryId, name: b.categoryName || 'Kategori', icon: '🏷️', type: 'Expense' };
-      if ((cat.type && cat.type !== 'Expense') || !b.amount || b.amount <= 0) return null;
+      const amount = finite(b.amount);
+      if ((cat.type && cat.type !== 'Expense') || amount <= 0) return null;
       const name = cat.name || b.categoryName;
-      return { cat: { ...cat, name }, limit: b.amount, used: b.used || 0, carryIn: b.carryIn || 0, base: b.base || 0 };
+      return { cat: { ...cat, name }, limit: amount, used: finite(b.used), carryIn: finite(b.carryIn), base: finite(b.base) };
     })
     .filter(Boolean);
   const total = rows.reduce((s, r) => s + r.limit, 0);
@@ -544,24 +595,124 @@ async function renderBudgetCard(transactions) {
     });
     return;
   }
+  const priority = r => r.used > r.limit ? 0 : r.used / r.limit >= 0.8 ? 1 : 2;
+  rows.sort((a, b) => priority(a) - priority(b) || a.cat.name.localeCompare(b.cat.name, 'id'));
   box.innerHTML = rows.map(({ cat, limit, used, carryIn, base }) => {
     const st = budgetStatus(used, limit);
     const carryLine = carryIn > 0 ? `<span class="badge badge--gold">+${formatRupiah(carryIn)} carry</span>` : '';
     return `
-      <div class="mb-3">
-        <div class="flex justify-between mb-1">
+      <div class="hall-budget-row mb-3">
+        <div class="flex justify-between mb-1 flex-wrap gap-2">
           <span class="font-semibold text-sm">${escapeHtml(cat.icon || '🏷️')} ${escapeHtml(cat.name)} ${carryLine}</span>
-          <span class="text-sm">${formatRupiah(used)} / ${formatRupiah(limit)}</span>
+          <strong class="${st.cls}">${st.label}</strong>
         </div>
         <div class="bar-track bar-track--sm">
           <div class="bar-fill--expense" style="width: ${st.pct}%;"></div>
         </div>
-        <p class="text-tertiary text-xs mt-1 ${st.cls}">${st.label}${base > 0 ? ` · base ${formatRupiah(base)}` : ''}</p>
+        <p class="text-secondary text-sm mt-1">${used > limit ? 'Melebihi batas' : used / limit >= 0.8 ? 'Hampir habis' : 'Masih tersedia'} · Terpakai ${formatRupiah(used)} · Batas ${formatRupiah(limit)}</p>
+        <form class="hall-budget-edit" data-budget-category="${escapeHtml(cat.id)}">
+          <label class="text-sm" for="budget-base-${escapeHtml(cat.id)}">Budget dasar${carryIn ? ` (di luar carry ${formatRupiah(carryIn)})` : ''}</label>
+          <input class="modal__input" id="budget-base-${escapeHtml(cat.id)}" name="base" type="number" min="0" step="1" required value="${base}" ${isPast ? 'disabled' : ''}>
+          <button class="btn btn--secondary" type="submit" ${isPast ? 'disabled title="Budget bulan lalu tidak dapat diubah"' : ''}>Ubah budget</button>
+        </form>
       </div>`;
   }).join('');
+  box.querySelectorAll('.hall-budget-edit').forEach(form => form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!(await requireMember()) || month < monthKey()) return;
+    const amount = Number(form.elements.base.value);
+    if (!Number.isSafeInteger(amount) || amount < 0) { showToast('Isi nominal rupiah bulat yang valid', 'danger'); return; }
+    const row = rows.find(r => r.cat.id === form.dataset.budgetCategory);
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+      await setBudgetBase(row.cat.id, month, amount, row.cat.name);
+      const fresh = await fetchAll();
+      await renderBudgetCard(fresh.transactions);
+      renderCategoryList();
+      showToast('Budget diperbarui', 'success');
+    } catch (err) { showToast('Gagal mengubah budget: ' + err.message, 'danger'); }
+    finally { button.disabled = false; }
+  }));
+}
+
+async function showBudgetSuggestions() {
+  const modal = document.getElementById('budgetAiModal');
+  const list = document.getElementById('budgetAiList');
+  const all = document.getElementById('budgetAiApplyAll');
+  const status = document.getElementById('budgetAiStatus');
+  const trigger = document.getElementById('budgetAiSuggest');
+  if (!modal || !list || !all || !status) return;
+  if (trigger?.disabled) return;
+  if (trigger) trigger.disabled = true;
+  all.disabled = true;
+  all.onclick = null;
+  status.textContent = 'Menyiapkan saran…';
+  list.setAttribute('aria-busy', 'true');
+  list.innerHTML = '<div class="budget-ai__empty"><span class="budget-ai__spinner" aria-hidden="true"></span><h4>Menganalisis pengeluaranmu</h4><p>Saran budget sedang disiapkan. Tunggu sebentar.</p></div>';
+  modal.classList.add('modal--open');
+  document.body.classList.add('modal-open');
+  modal.querySelector('.modal__close')?.focus();
+  try {
+    const fresh = await fetchAll();
+    const budgets = await getBudgets(budgetMonth);
+    const suggestions = generateBudgetSuggestions(budgetMonth, fresh.transactions, budgets, await getCategories());
+    const eligible = suggestions.filter(s => s.applicable !== false && s.categoryId);
+    if (!suggestions.length) {
+      list.innerHTML = '<div class="budget-ai__empty"><h4>Belum ada saran untuk bulan ini</h4><p>Catat transaksi pengeluaran beserta kategorinya, lalu buka Saran AI lagi setelah ada riwayat pengeluaran.</p></div>';
+    } else list.innerHTML = suggestions.map((s, i) => {
+      const confidence = s.confidence > 0.8 ? ['success', 'Yakin'] : s.confidence >= 0.7 ? ['warning', 'Cukup yakin'] : ['neutral', 'Perkiraan'];
+      const delta = s.suggestedBudget - s.currentBudget;
+      const available = s.applicable !== false && Boolean(s.categoryId);
+      return `<article class="budget-ai__card" data-ai-index="${i}">
+        <div class="budget-ai__heading"><h4>${escapeHtml(s.categoryName)}</h4><span class="badge badge--${confidence[0]}">${confidence[1]} <small>· ${Math.round(s.confidence * 100)}%</small></span></div>
+        <div class="budget-ai__amounts"><div><span class="budget-ai__label">Saran per bulan</span><strong class="budget-ai__amount">${formatRupiah(s.suggestedBudget)}</strong></div><div><span class="budget-ai__label">Budget saat ini</span><span class="budget-ai__previous">${formatRupiah(s.currentBudget)}</span></div></div>
+        <p class="budget-ai__delta budget-ai__delta--${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}">${delta > 0 ? '↑ Naik ' : delta < 0 ? '↓ Turun ' : 'Tidak berubah'}${delta ? formatRupiah(Math.abs(delta)) : ''}</p>
+        <p class="budget-ai__reason">${escapeHtml(s.reasoning)}</p>
+        <div class="budget-ai__action">${available ? `<button type="button" class="btn btn--secondary budget-ai-apply" data-index="${i}" aria-label="Terapkan saran untuk ${escapeHtml(s.categoryName)}">Terapkan saran ini</button>` : '<span class="budget-ai__unavailable" aria-disabled="true" title="Kategori belum tersedia">Kategori belum tersedia</span>'}</div>
+      </article>`;
+    }).join('');
+    status.textContent = eligible.length ? `${eligible.length} saran siap diterapkan. Kamu tetap bisa mengubah budget nanti.` : 'Belum ada saran yang bisa diterapkan.';
+    all.textContent = `Terapkan semua saran${eligible.length ? ` (${eligible.length})` : ''}`;
+    all.disabled = !eligible.length;
+    const apply = async (items, button) => {
+      const buttons = [...list.querySelectorAll('.budget-ai-apply'), all];
+      buttons.forEach(b => { b.disabled = true; });
+      const label = button.textContent;
+      button.textContent = 'Menerapkan…';
+      button.classList.add('budget-ai__busy');
+      status.textContent = 'Menyimpan budget. Tunggu sebentar…';
+      try {
+        for (const s of items) if (s.categoryId) await setBudgetBase(s.categoryId, budgetMonth, s.suggestedBudget, s.categoryName);
+        const updated = await fetchAll();
+        renderBudgetCard(updated.transactions);
+        renderCategoryList();
+        showToast('Budget AI diterapkan', 'success');
+        closeModal('budgetAiModal');
+      } catch (err) {
+        status.textContent = 'Budget belum selesai diterapkan. Coba lagi.';
+        showToast('Gagal menerapkan saran AI: ' + err.message, 'danger');
+      } finally {
+        buttons.forEach(b => { b.disabled = false; });
+        button.textContent = label;
+        button.classList.remove('budget-ai__busy');
+      }
+    };
+    list.querySelectorAll('.budget-ai-apply').forEach(btn => btn.addEventListener('click', () => apply([suggestions[Number(btn.dataset.index)]], btn)));
+    all.onclick = () => apply(eligible, all);
+  } catch (err) {
+    list.innerHTML = '<div class="budget-ai__empty"><h4>Saran belum bisa dimuat</h4><p>Tutup panel ini, lalu buka Saran AI untuk mencoba lagi.</p></div>';
+    status.textContent = 'Tidak ada budget yang diubah.';
+    showToast('Gagal memuat saran AI: ' + err.message, 'danger');
+  } finally {
+    list.setAttribute('aria-busy', 'false');
+    if (trigger) trigger.disabled = false;
+  }
 }
 
 function setupBudgetNav() {
+  const ai = document.getElementById('budgetAiSuggest');
+  if (ai && !ai.dataset.bound) { ai.dataset.bound = 'true'; ai.addEventListener('click', showBudgetSuggestions); }
   const prev = document.getElementById('budgetPrevMonth');
   if (prev && !prev.dataset.bound) {
     prev.dataset.bound = 'true';
@@ -592,7 +743,11 @@ function setupBudgetNav() {
     copy.addEventListener('click', async () => {
       if (!(await requireMember())) return;
       try {
-        const n = await copyMonth(shiftMonth(budgetMonth, -1), budgetMonth);
+        const month = budgetMonth;
+        const [source, destination] = await Promise.all([getBudgets(shiftMonth(month, -1)), getBudgets(month)]);
+        const candidates = source.filter(b => b.base > 0 && !destination.some(d => d.categoryId === b.categoryId && d.base > 0));
+        if (!confirm(`Salin ke ${month}: ${candidates.length} kategori, total budget dasar ${formatRupiah(candidates.reduce((sum, b) => sum + b.base, 0))}. Budget dasar yang sudah terisi tidak ditimpa. Lanjutkan?`)) return;
+        const n = await copyMonth(shiftMonth(month, -1), month);
         showToast(n ? `Disalin ${n} budget dari bulan lalu` : 'Bulan lalu kosong / sudah terisi', 'success');
         const fresh = await fetchAll();
         renderBudgetCard(fresh.transactions);
@@ -606,7 +761,12 @@ function setupBudgetNav() {
     carry.addEventListener('click', async () => {
       if (!(await requireMember())) return;
       try {
-        const n = await applyCarry(shiftMonth(budgetMonth, -1), budgetMonth);
+        const month = budgetMonth;
+        const freshPreview = await fetchAll();
+        const source = await getMonthView(shiftMonth(month, -1), freshPreview.transactions);
+        const candidates = source.filter(b => b.amount > b.used);
+        if (!confirm(`Terapkan sisa ke ${month}: ${candidates.length} kategori, total ${formatRupiah(candidates.reduce((sum, b) => sum + b.amount - b.used, 0))}. Nilai carry kategori terkait diganti, bukan ditambahkan; budget dasar tetap. Lanjutkan?`)) return;
+        const n = await applyCarry(shiftMonth(month, -1), month);
         showToast(n ? `Carry diterapkan ke ${n} kategori` : 'Tidak ada sisa bulan lalu', 'success');
         const fresh = await fetchAll();
         renderBudgetCard(fresh.transactions);
@@ -658,8 +818,8 @@ async function renderCategoryList() {
     const budgetLine = c.type === 'Expense'
       ? `<div class="text-xs ${st.cls}">${limit > 0 ? `${formatRupiah(used)} / ${formatRupiah(limit)} · ${st.label}` : 'Tanpa budget'}</div>
           <div class="flex gap-1 mt-1">
-            <input type="number" class="modal__input cat-budget-input" data-cat="${c.id}" min="0" step="1" inputmode="numeric" placeholder="Budget Rp" value="${limit > 0 ? limit : ''}" aria-label="Budget ${escapeHtml(c.name)}">
-            <button class="btn btn--ghost btn--sm-text cat-budget-save" data-cat="${c.id}">💾</button>
+            <input type="number" class="modal__input cat-budget-input" data-cat="${escapeHtml(c.id)}" min="0" step="1" inputmode="numeric" placeholder="Budget Rp" value="${limit > 0 ? limit : ''}" aria-label="Budget ${escapeHtml(c.name)}">
+            <button class="btn btn--ghost btn--sm-text cat-budget-save" data-cat="${escapeHtml(c.id)}">💾</button>
           </div>`
       : `<div class="list__subtitle">${c.type === 'Income' ? 'Pemasukan' : 'Pengeluaran'}</div>`;
     return `
@@ -669,7 +829,7 @@ async function renderCategoryList() {
         <div class="list__title font-semibold">${escapeHtml(c.name)}</div>
         ${budgetLine}
       </div>
-      <button class="btn btn--ghost btn--danger-text cat-delete" data-cat="${c.id}" data-name="${escapeHtml(c.name)}"${delTitle}>✕</button>
+      <button class="btn btn--ghost btn--danger-text cat-delete" data-cat="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name)}"${delTitle}>✕</button>
     </div>`;
   }).join('');
 
@@ -799,101 +959,6 @@ function setupCategoryModal() {
   }
 }
 
-// ---- Member Management ----
-async function renderMemberList() {
-  const list = document.getElementById('memberListManaged');
-  if (!list) return;
-  const guildId = getCurrentMember()?.guildId;
-  if (!guildId) {
-    list.innerHTML = '<p class="text-tertiary text-sm p-4">Sesi berakhir. Silakan login ulang.</p>';
-    return;
-  }
-  const members = await getMembersByGuild(guildId);
-  const current = getCurrentMember();
-  if (!current) {
-    list.innerHTML = '<p class="text-tertiary text-sm p-4">Sesi berakhir. Silakan login ulang.</p>';
-    return;
-  }
-
-  list.innerHTML = members.map(m => {
-    const isSelf = m.id === current.memberId;
-    return `
-      <div class="list__item p-2 row-item">
-        <div class="list__icon">${m.role === 'Admin' ? '👑' : m.role === 'Co-Manager' ? '🧙' : '👀'}</div>
-        <div class="list__content">
-          <div class="list__title font-semibold">${escapeHtml(m.name)}${isSelf ? ' (Anda)' : ''}</div>
-          <div class="list__subtitle">${m.role} • Aktif</div>
-        </div>
-        <div class="list__meta flex-col items-end gap-1">
-          <button class="btn btn--ghost btn--sm-text mem-reset-pin" data-id="${m.id}" data-name="${escapeHtml(m.name)}">🔑 Reset PIN</button>
-          <button class="btn btn--ghost btn--danger-text mem-delete" data-id="${m.id}" data-name="${escapeHtml(m.name)}" ${isSelf ? 'disabled' : ''}>✕</button>
-        </div>
-      </div>`;
-  }).join('');
-
-  list.querySelectorAll('.mem-reset-pin').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const name = btn.dataset.name;
-      const newPin = prompt(`PIN baru 6 digit untuk "${name}":`);
-      if (newPin === null) return;
-      if (!/^\d{6}$/.test(newPin)) { showToast('PIN harus 6 digit angka', 'danger'); return; }
-      try {
-        const salt = generateSalt();
-        const pinHash = await hashPin(newPin, salt);
-        await updateMember(btn.dataset.id, { pinSalt: salt, pinHash });
-        showToast(`PIN ${name} direset ✅`, 'success');
-      } catch (err) {
-        showToast('Gagal reset PIN: ' + err.message, 'danger');
-      }
-    });
-  });
-
-  list.querySelectorAll('.mem-delete').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const name = btn.dataset.name;
-      if (!confirm(`Hapus anggota "${name}"? Data transaksinya tetap tersimpan.`)) return;
-      try {
-        await deleteMember(btn.dataset.id);
-        showToast('Anggota dihapus', 'info');
-        renderMemberList();
-      } catch (err) {
-        showToast('Gagal hapus: ' + err.message, 'danger');
-      }
-    });
-  });
-}
-
-function setupMemberModal() {
-  const form = document.getElementById('memberForm');
-  if (form && !form.dataset.bound) {
-    form.dataset.bound = 'true';
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = form.memName.value.trim();
-      const role = form.memRole.value;
-      const pin = form.memPin.value;
-      const pin2 = form.memPin2 ? form.memPin2.value : pin;
-      if (!name) { showToast('Nama wajib diisi', 'danger'); return; }
-      if (!/^\d{6}$/.test(pin)) { showToast('PIN harus 6 digit angka', 'danger'); return; }
-      if (pin !== pin2) { showToast('PIN tidak cocok', 'danger'); return; }
-      const guildId = getCurrentMember()?.guildId;
-      if (!guildId) { showToast('Guild tidak ditemukan', 'danger'); return; }
-      const dup = (await getMembersByGuild(guildId)).some(m => m.name.toLowerCase() === name.toLowerCase());
-      if (dup) { showToast('Nama sudah dipakai anggota lain', 'danger'); return; }
-      try {
-        const salt = generateSalt();
-        const pinHash = await hashPin(pin, salt);
-        await createMember({ name, role, pinSalt: salt, pinHash, guildId });
-        showToast('Anggota ditambahkan! 👥', 'success');
-        form.reset();
-        renderMemberList();
-      } catch (err) {
-        showToast('Gagal tambah anggota: ' + err.message, 'danger');
-      }
-    });
-  }
-}
-
 // ---- Role-based UI gating ----
 function applyRoleGating() {
   const editable = canEdit();
@@ -939,8 +1004,8 @@ function applyRoleGating() {
 // ---- Settings Modal (5 tab) ----
 function getPrefs() {
   try {
-    return { notif: 'on', defaultPouchId: '', ...(JSON.parse(localStorage.getItem('ffh-prefs') || '{}')) };
-  } catch { return { notif: 'on', defaultPouchId: '' }; }
+    return { notif: 'on', simple: 'on', quiet: 'off', defaultPouchId: '', ...(JSON.parse(localStorage.getItem('ffh-prefs') || '{}')) };
+  } catch { return { notif: 'on', simple: 'on', quiet: 'off', defaultPouchId: '' }; }
 }
 
 function setPrefs(patch) {
@@ -978,14 +1043,15 @@ async function fillSettingsForms() {
   const ps = document.getElementById('prefPouch');
   if (ps) {
     ps.innerHTML = '<option value="">Otomatis (pouch pertama)</option>' +
-      pouches.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+      pouches.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
     if (pref.defaultPouchId && pouches.some((p) => p.id === pref.defaultPouchId)) ps.value = pref.defaultPouchId;
   }
-  const stored = localStorage.getItem('ffh-theme');
-  const pt = document.getElementById('prefTheme');
-  if (pt) pt.value = stored === 'dark' ? 'dark' : stored === 'light' ? 'light' : 'system';
   const pn = document.getElementById('prefNotif');
   if (pn) pn.value = pref.notif === 'off' ? 'off' : 'on';
+  const simpleSelect = document.getElementById('prefSimple');
+  if (simpleSelect) simpleSelect.value = pref.simple === 'off' ? 'off' : 'on';
+  const pq = document.getElementById('prefQuiet');
+  if (pq) pq.value = pref.quiet === 'on' ? 'on' : 'off';
   await renderProfilePane();
   if (showMembers) await renderSettingsMembers();
 }
@@ -1015,32 +1081,38 @@ async function renderSettingsMembers() {
     list.innerHTML = '<p class="text-tertiary text-sm p-4">Sesi berakhir. Silakan login ulang.</p>';
     return;
   }
-  const members = await getMembersByGuild(guildId);
+  const members = await getMembersByGuild(guildId, false);
   const current = getCurrentMember();
-  list.innerHTML = members.map((m) => {
-    const isSelf = current && m.id === current.memberId;
+  list.replaceChildren();
+  function append(parent, tag, className, text = '') {
+    const node = document.createElement(tag);
+    node.className = className;
+    node.textContent = text;
+    parent.append(node);
+    return node;
+  }
+  for (const m of members) {
     const active = m.active !== false;
-    return `
-      <div class="list__item p-2 row-item${active ? '' : ' member-row--inactive'}">
-        <div class="list__icon">${m.role === 'Admin' ? '👑' : m.role === 'Co-Manager' ? '🧙' : '👀'}</div>
-        <div class="list__content">
-          <div class="list__title font-semibold">${escapeHtml(m.name)}${isSelf ? ' (Anda)' : ''}</div>
-          <div class="list__subtitle">${m.role} • ${active ? 'Aktif' : 'Nonaktif'}</div>
-        </div>
-        <div class="list__meta flex-col items-end gap-1">
-          <select class="modal__select btn--sm-text setmem-role" data-id="${m.id}" ${isSelf ? 'disabled' : ''}>
-            <option value="Admin"${m.role === 'Admin' ? ' selected' : ''}>Admin</option>
-            <option value="Co-Manager"${m.role === 'Co-Manager' ? ' selected' : ''}>Co-Manager</option>
-            <option value="Viewer"${m.role === 'Viewer' ? ' selected' : ''}>Viewer</option>
-          </select>
-          <div class="flex gap-1">
-            <button class="btn btn--ghost btn--sm-text setmem-pin" data-id="${m.id}" data-name="${escapeHtml(m.name)}">🔑 PIN</button>
-            <button class="btn btn--ghost btn--sm-text setmem-toggle" data-id="${m.id}" data-active="${active ? '1' : '0'}" ${isSelf ? 'disabled' : ''}>${active ? '⏸️' : '▶️'}</button>
-            <button class="btn btn--ghost btn--danger-text setmem-delete" data-id="${m.id}" data-name="${escapeHtml(m.name)}" ${isSelf ? 'disabled' : ''}>✕</button>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
+    const self = m.id === current?.memberId;
+    const row = append(list, 'div', `list__item p-2 row-item${active ? '' : ' member-row--inactive'}`);
+    append(row, 'div', 'list__icon', m.role === 'Admin' ? '👑' : m.role === 'Co-Manager' ? '🧙' : '👀');
+    const content = append(row, 'div', 'list__content');
+    append(content, 'div', 'list__title font-semibold', `${m.name}${self ? ' (Anda)' : ''}`);
+    append(content, 'div', 'list__subtitle', `${m.role} • ${active ? 'Aktif' : 'Nonaktif'}`);
+    if (self || isAllowedMemberId(m.id) || !canManageMembers()) continue;
+    const meta = append(row, 'div', 'list__meta flex-col items-end gap-1');
+    const role = append(meta, 'select', 'modal__select btn--sm-text setmem-role');
+    role.setAttribute('aria-label', `Role ${m.name}`);
+    role.dataset.id = m.id;
+    for (const r of ['Admin', 'Member', 'Co-Manager', 'Viewer']) role.add(new Option(r, r, false, r === m.role));
+    const actions = append(meta, 'div', 'flex gap-1');
+    const toggle = append(actions, 'button', 'btn btn--ghost btn--sm-text setmem-toggle', active ? 'Nonaktifkan' : 'Aktifkan');
+    toggle.dataset.id = m.id;
+    toggle.dataset.active = active ? '1' : '0';
+    const del = append(actions, 'button', 'btn btn--ghost btn--danger-text setmem-delete', 'Hapus');
+    del.dataset.id = m.id;
+    del.dataset.name = m.name;
+  }
 
   list.querySelectorAll('.setmem-role').forEach((sel) => {
     sel.addEventListener('change', async () => {
@@ -1057,21 +1129,6 @@ async function renderSettingsMembers() {
         showToast('Role diperbarui', 'success');
         renderSettingsMembers();
       } catch (err) { showToast('Gagal update role: ' + err.message, 'danger'); }
-    });
-  });
-
-  list.querySelectorAll('.setmem-pin').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!canManageMembers()) { showToast('Hanya Admin.', 'danger'); return; }
-      const newPin = prompt(`PIN baru 6 digit untuk "${btn.dataset.name}":`);
-      if (newPin === null) return;
-      if (!/^\d{6}$/.test(newPin)) { showToast('PIN harus 6 digit angka', 'danger'); return; }
-      try {
-        const salt = generateSalt();
-        const pinHash = await hashPin(newPin, salt);
-        await updateMember(btn.dataset.id, { pinSalt: salt, pinHash });
-        showToast(`PIN ${btn.dataset.name} direset ✅`, 'success');
-      } catch (err) { showToast('Gagal reset PIN: ' + err.message, 'danger'); }
     });
   });
 
@@ -1187,19 +1244,13 @@ function setupSettings() {
       if (!canManageMembers()) { showToast('Hanya Admin.', 'danger'); return; }
       const name = memForm.memName.value.trim();
       const role = memForm.memRole.value;
-      const pin = memForm.memPin.value;
-      const pin2 = memForm.memPin2.value;
       if (!name) { showToast('Nama wajib diisi', 'danger'); return; }
-      if (!/^\d{6}$/.test(pin)) { showToast('PIN harus 6 digit angka', 'danger'); return; }
-      if (pin !== pin2) { showToast('PIN tidak cocok', 'danger'); return; }
       const guildId = getCurrentMember()?.guildId;
       if (!guildId) { showToast('Guild tidak ditemukan', 'danger'); return; }
       const dup = (await getMembersByGuild(guildId)).some((m) => m.name.toLowerCase() === name.toLowerCase());
       if (dup) { showToast('Nama sudah dipakai anggota lain', 'danger'); return; }
       try {
-        const salt = generateSalt();
-        const pinHash = await hashPin(pin, salt);
-        await createMember({ name, role, pinSalt: salt, pinHash, guildId });
+        await createMember({ name, role, guildId });
         showToast('Anggota ditambahkan! 👥', 'success');
         memForm.reset();
         renderSettingsMembers();
@@ -1226,56 +1277,6 @@ function setupSettings() {
     });
   }
 
-  const pinForm = document.getElementById('profilePinForm');
-  if (pinForm && !pinForm.dataset.bound) {
-    pinForm.dataset.bound = 'true';
-    pinForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const cur = getCurrentMember();
-      if (!cur) { showToast('Sesi berakhir. Silakan login ulang.', 'danger'); return; }
-      const oldPin = pinForm.oldPin.value;
-      const newPin = pinForm.newPin.value;
-      const newPin2 = pinForm.newPin2.value;
-      if (!/^\d{6}$/.test(newPin)) { showToast('PIN baru harus 6 digit angka', 'danger'); return; }
-      if (newPin !== newPin2) { showToast('PIN baru tidak cocok', 'danger'); return; }
-      try {
-        const m = await getMember(cur.memberId);
-        if (!m) { showToast('Anggota tidak ditemukan', 'danger'); return; }
-        const ok = await verifyPin(oldPin, m.pinSalt, m.pinHash);
-        if (!ok) { showToast('PIN lama salah', 'danger'); return; }
-        const salt = generateSalt();
-        const pinHash = await hashPin(newPin, salt);
-        await updateMember(cur.memberId, { pinSalt: salt, pinHash });
-        showToast('PIN diganti! 🔑', 'success');
-        pinForm.reset();
-      } catch (err) { showToast('Gagal: ' + err.message, 'danger'); }
-    });
-  }
-
-  const prefTheme = document.getElementById('prefTheme');
-  if (prefTheme && !prefTheme.dataset.bound) {
-    prefTheme.dataset.bound = 'true';
-    prefTheme.addEventListener('change', () => {
-      const root = document.documentElement;
-      const btn = document.getElementById('themeToggle');
-      if (prefTheme.value === 'dark') {
-        root.classList.add('dark'); root.classList.remove('light');
-        localStorage.setItem('ffh-theme', 'dark');
-        if (btn) btn.textContent = '☀️';
-      } else if (prefTheme.value === 'light') {
-        root.classList.add('light'); root.classList.remove('dark');
-        localStorage.setItem('ffh-theme', 'light');
-        if (btn) btn.textContent = '🌙';
-      } else {
-        localStorage.removeItem('ffh-theme');
-        const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.toggle('dark', dark);
-        root.classList.toggle('light', !dark);
-        if (btn) btn.textContent = dark ? '☀️' : '🌙';
-      }
-      showToast('Tema diperbarui', 'info');
-    });
-  }
 
   const prefPouch = document.getElementById('prefPouch');
   if (prefPouch && !prefPouch.dataset.bound) {
@@ -1295,6 +1296,24 @@ function setupSettings() {
         try { await Notification.requestPermission(); } catch {}
       }
       showToast('Preferensi notifikasi disimpan', 'info');
+    });
+  }
+
+  const prefQuiet = document.getElementById('prefQuiet');
+  if (prefQuiet && !prefQuiet.dataset.bound) {
+    prefQuiet.dataset.bound = 'true';
+    prefQuiet.addEventListener('change', () => {
+      setPrefs({ quiet: prefQuiet.value });
+      location.reload();
+    });
+  }
+
+  const prefSimple = document.getElementById('prefSimple');
+  if (prefSimple && !prefSimple.dataset.bound) {
+    prefSimple.dataset.bound = 'true';
+    prefSimple.addEventListener('change', () => {
+      setSimpleOn(prefSimple.value === 'on');
+      location.reload();
     });
   }
 
@@ -1319,6 +1338,28 @@ function setupSettings() {
       window.handleBackupRestore(e);
     });
   }
+
+  const waBtn = document.getElementById('setBtnBackupWA');
+  if (waBtn && !waBtn.dataset.bound) {
+    waBtn.dataset.bound = 'true';
+    waBtn.addEventListener('click', async () => {
+      if (!canBackup()) { showToast('Hanya Admin.', 'danger'); return; }
+      try {
+        const data = await exportBackup();
+        const file = new File([JSON.stringify(data)], `kelolaracun-backup-${new Date().toISOString().split('T')[0]}.json`, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Backup KelolaRacun' });
+        } else {
+          downloadBackup(data);
+          showToast('Share tidak didukung — file diunduh, kirim manual via WA', 'warning');
+        }
+      } catch (err) {
+        if (err?.name !== 'AbortError') showToast('Gagal share: ' + err.message, 'danger');
+      }
+    });
+  }
+
+  scheduleAutoBackup();
 
   const resetBtn = document.getElementById('setBtnResetAll');
   if (resetBtn && !resetBtn.dataset.bound) {
@@ -1396,7 +1437,7 @@ function populatePouchSelect(selectEl, pouches, selectedId) {
   selectEl.innerHTML = pouches.map(p => {
     const meta = POUCH_TYPE_META[p.type] || { icon: '💰' };
     const sel = p.id === selectedId ? ' selected' : '';
-    return `<option value="${p.id}"${sel}>${meta.icon} ${escapeHtml(p.name)} — ${formatRupiah(p.balance)}</option>`;
+    return `<option value="${escapeHtml(p.id)}"${sel}>${meta.icon} ${escapeHtml(p.name)} — ${formatRupiah(p.balance)}</option>`;
   }).join('');
 }
 
@@ -1586,14 +1627,22 @@ function setupBillModalForm(showToastFn) {
         if (!(await requireMember())) return;
         renderCategoryList();
       }
-      if (modalId === 'memberModal') renderMemberList();
       const type = btn.dataset.type;
       if (type) {
         const typeInput = document.getElementById('txTypeInput');
         if (typeInput) typeInput.value = type;
         const titleEl = document.getElementById('txModalTitle');
-        if (titleEl) titleEl.textContent = type === 'Income' ? '➕ Tambah Loot (Pemasukan)' : '💸 Catat Pengeluaran';
+        if (titleEl) {
+          const emoji = titleEl.querySelector('.modal__emoji');
+          emoji.textContent = type === 'Income' ? '➕' : '💸';
+          titleEl.replaceChildren(emoji, document.createTextNode(type === 'Income' ? ' Uang Masuk' : ' Uang Keluar'));
+        }
         fillCatOptions(type);
+      }
+      const txDate = document.getElementById('txDate');
+      if (txDate && !txDate.value) {
+        const d = new Date();
+        txDate.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
       openModal(modalId);
     });
@@ -1610,7 +1659,6 @@ function setupBillModalForm(showToastFn) {
   setupBackup();
   setupQuestModalForm();
   setupCategoryModal();
-  setupMemberModal();
   setupSettings();
   applySettingsGating();
 

@@ -43,11 +43,26 @@ export function validateTransactionForm(data) {
   return errors;
 }
 
+const modalOpeners = new WeakMap();
+const modalFocusable = 'a[href], button, input:not([type="hidden"]), select, textarea, [tabindex], [contenteditable="true"]';
+
+function getModalFocusable(modal) {
+  return [...modal.querySelectorAll(modalFocusable)].filter((el) =>
+    !el.matches(':disabled') && el.tabIndex >= 0 &&
+    !el.closest('[hidden], [inert]') && el.getClientRects().length > 0 &&
+    getComputedStyle(el).visibility !== 'hidden'
+  );
+}
+
 export function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return;
+  if (!modal.classList.contains('modal--open')) modalOpeners.set(modal, document.activeElement);
   modal.classList.add('modal--open');
   document.body.classList.add('modal-open');
+  const focusable = getModalFocusable(modal);
+  const firstField = focusable.find((el) => el.matches('input:not([type="hidden"]), select, textarea'));
+  (firstField || focusable.find((el) => el.matches('.modal__close')))?.focus();
 }
 
 export function closeModal(modalId) {
@@ -55,6 +70,9 @@ export function closeModal(modalId) {
   if (!modal) return;
   modal.classList.remove('modal--open');
   document.body.classList.remove('modal-open');
+  const opener = modalOpeners.get(modal);
+  modalOpeners.delete(modal);
+  if (opener?.isConnected) opener.focus();
 }
 
 export function setupModalClose() {
@@ -68,6 +86,17 @@ export function setupModalClose() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal--open').forEach((m) => closeModal(m.id));
+    }
+    if (e.key === 'Tab') {
+      const modal = document.activeElement?.closest('.modal--open');
+      if (!modal) return;
+      const focusable = getModalFocusable(modal);
+      const index = focusable.indexOf(document.activeElement);
+      if (!focusable.length || index === -1 ||
+          (e.shiftKey ? index === 0 : index === focusable.length - 1)) {
+        e.preventDefault();
+        focusable[e.shiftKey ? focusable.length - 1 : 0]?.focus();
+      }
     }
   });
 }
@@ -91,3 +120,55 @@ export const POUCH_TYPE_META = {
   Investment: { icon: '🔮', label: 'Investasi' },
   'E-Wallet': { icon: '📱', label: 'E-Wallet' }
 };
+
+export function getSimpleOn() {
+  try {
+    const pref = JSON.parse(localStorage.getItem('ffh-prefs') || '{}');
+    return pref.simple !== 'off';
+  } catch { return true; }
+}
+
+export function setSimpleOn(on) {
+  try {
+    const pref = JSON.parse(localStorage.getItem('ffh-prefs') || '{}');
+    localStorage.setItem('ffh-prefs', JSON.stringify({ ...pref, simple: on ? 'on' : 'off' }));
+  } catch {}
+}
+
+export function applySimpleLang() {
+  if (!getSimpleOn()) return;
+  document.querySelectorAll('[data-simple]').forEach((el) => {
+    if (!el.dataset.guild) el.dataset.guild = el.textContent;
+    el.textContent = el.dataset.simple;
+  });
+  const dict = [
+    [/Loot/g, 'Uang Masuk'],
+    [/Pouch/g, 'Dompet'],
+    [/Monthly Quest/g, 'Target Bulanan'],
+    [/\bQuest\b/g, 'Target'],
+    [/\bHall\b/g, 'Analisa']
+  ];
+  try {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (p.closest('script,style')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((n) => {
+      let v = n.nodeValue;
+      dict.forEach(([re, rep]) => { v = v.replace(re, rep); });
+      n.nodeValue = v;
+    });
+    document.querySelectorAll('[placeholder]').forEach((el) => {
+      let p = el.getAttribute('placeholder') || '';
+      dict.forEach(([re, rep]) => { p = p.replace(re, rep); });
+      el.setAttribute('placeholder', p);
+    });
+  } catch (err) { console.warn('Penerapan bahasa gagal:', err); }
+}

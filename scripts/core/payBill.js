@@ -88,6 +88,27 @@ export async function openPayBillModal(billId) {
 
   const amountInput = document.getElementById('payBillAmount');
   amountInput.value = remaining;
+  amountInput.readOnly = true;
+  let partial = document.getElementById('payBillPartial');
+  if (!partial) {
+    partial = document.createElement('button');
+    partial.type = 'button';
+    partial.id = 'payBillPartial';
+    partial.className = 'btn btn--ghost btn--sm';
+    partial.textContent = 'Bayar sebagian';
+    amountInput.closest('.modal__form-group')?.appendChild(partial);
+    partial.addEventListener('click', () => {
+      const locked = amountInput.readOnly;
+      amountInput.readOnly = !locked;
+      partial.textContent = locked ? 'Kunci lunas' : 'Bayar sebagian';
+      if (!locked) amountInput.value = remaining;
+      amountInput.focus();
+    });
+  } else {
+    partial.textContent = 'Bayar sebagian';
+  }
+  const submitBtn = document.getElementById('payBillSubmit');
+  if (submitBtn) submitBtn.textContent = `Bayar Lunas (${formatRupiah(remaining)})`;
   const dateInput = document.getElementById('payBillDate');
   if (dateInput && !dateInput.value) dateInput.value = todayLocal();
   await refreshWarn();
